@@ -95,6 +95,17 @@ class AudioEngine {
     g.gain.value = volume;
     src.connect(g).connect(dest);
     src.start(when || this.now);
+    return g;
+  }
+
+  /** Ton från greppbrädan. Vid slide dämpas förra tonen så att det låter som en glidning på strängen. */
+  fretNote(midi, { slide, prev }) {
+    if (slide && prev) {
+      const t = this.now;
+      prev.gain.setValueAtTime(prev.gain.value, t);
+      prev.gain.linearRampToValueAtTime(0, t + 0.07);
+    }
+    return this.pluck(midi, 0, slide ? 0.65 : 0.9);
   }
 
   // ---- Trummor ----

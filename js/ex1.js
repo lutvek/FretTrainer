@@ -69,18 +69,19 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
         fretStart: FRET_START,
         fretEnd: FRET_END,
         activeStrings: STRINGS,
-        onTap(string, fret) {
-          if (done) return;
-          const midi = midiAt(string, fret);
-          const tap = { string, fret };
+        canJudge: () => !done && accepting,
+        isHit: (pos) => pc(midiAt(pos.string, pos.fret)) === target,
+        play(pos, how) {
+          if (done) return null;
+          const midi = midiAt(pos.string, pos.fret);
+          if (!prev || !samePos(pos, prev))
+            board.setMarker('free', { ...pos, label: SHARP[pc(midi)], kind: 'neutral', ttl: 400 });
+          return audio.fretNote(midi, how);
+        },
+        judge(tap) {
+          const midi = midiAt(tap.string, tap.fret);
           const label = SHARP[pc(midi)];
-          audio.pluck(midi);
-
-          if (!accepting) {
-            if (!prev || !samePos(tap, prev))
-              board.setMarker('free', { ...tap, label, kind: 'neutral', ttl: 400 });
-            return;
-          }
+          board.removeMarker('free');
           if (pc(midi) !== target) {
             score.wrong++;
             updateScore();

@@ -72,18 +72,20 @@ export const ex2 = {
     const board = new Fretboard(env.board, {
       fretStart,
       fretEnd,
-      onTap(string, fret) {
-        if (done) return;
+      canJudge: () => !done && current >= 0 && !found,
+      isHit: (pos) => pc(midiAt(pos.string, pos.fret)) === chords[current % chords.length].targetPc,
+      // Före start, eller när tonen redan är hittad, blir detta fritt spel utan bedömning.
+      play(pos, how) {
+        if (done) return null;
+        const midi = midiAt(pos.string, pos.fret);
+        board.setMarker('free', { ...pos, label: noteName(midi, key.flats), kind: 'neutral', ttl: 500 });
+        return audio.fretNote(midi, how);
+      },
+      judge({ string, fret }) {
         const midi = midiAt(string, fret);
         const label = noteName(midi, key.flats);
         const tap = { string, fret, label };
-        audio.pluck(midi);
-
-        // Före start, eller när tonen redan är hittad: spela fritt utan bedömning.
-        if (current < 0 || found) {
-          board.setMarker('free', { ...tap, kind: 'neutral', ttl: 500 });
-          return;
-        }
+        board.removeMarker('free');
         const chord = chords[current % chords.length];
         if (pc(midi) === chord.targetPc) {
           found = true;

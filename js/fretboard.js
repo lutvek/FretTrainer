@@ -6,14 +6,18 @@ const NS = 'http://www.w3.org/2000/svg';
 export class Fretboard {
   /**
    * @param {HTMLElement} container
-   * @param {{fretStart:number, fretEnd:number, activeStrings?:number[], onTap:(string:number, fret:number)=>void}} opts
+   * @param {object} opts fretStart, fretEnd, activeStrings samt återanrop:
+   *   play(pos, {slide, prev}) – spela/visa tonen, returnerar rösten (skickas tillbaka som prev vid slide)
+   *   canJudge() – tar övningen emot svar just nu?
+   *   isHit(pos) – är detta en rätt ton?
+   *   judge(pos) – bedöm tonen
    */
-  constructor(container, { fretStart, fretEnd, activeStrings = [0, 1, 2, 3, 4, 5], onTap }) {
+  constructor(container, { fretStart, fretEnd, activeStrings = [0, 1, 2, 3, 4, 5], ...handlers }) {
     this.container = container;
     this.fretStart = fretStart;
     this.fretEnd = fretEnd;
     this.activeStrings = activeStrings;
-    this.onTap = onTap;
+    this.h = handlers;
     this.markers = new Map();
     this.timers = new Map();
 
@@ -21,12 +25,39 @@ export class Fretboard {
     this.svg.classList.add('fretboard');
     container.replaceChildren(this.svg);
 
-    this.onPointer = (e) => {
+    // Varje finger följs för sig: tryck spelar tonen, och dras fingret till en ny
+    // ruta spelas den tonen också ("slide"). Bedömningen sker direkt om första tonen
+    // är rätt, annars på tonen där fingret lyfts.
+    this.pointers = new Map();
+    const down = (e) => {
       e.preventDefault();
-      const hit = this.hitTest(e.clientX, e.clientY);
-      if (hit) this.onTap(hit.string, hit.fret);
+      const pos = this.hitTest(e.clientX, e.clientY);
+      const st = { pos, pending: false, voice: null };
+      this.pointers.set(e.pointerId, st);
+      try { this.svg.setPointerCapture(e.pointerId); } catch { /* ok */ }
+      const judgeNow = this.h.canJudge() && this.h.isHit(pos);
+      st.pending = !judgeNow && this.h.canJudge();
+      st.voice = this.h.play(pos, { slide: false, prev: null });
+      if (judgeNow) this.h.judge(pos);
     };
-    this.svg.addEventListener('pointerdown', this.onPointer);
+    const move = (e) => {
+      const st = this.pointers.get(e.pointerId);
+      if (!st) return;
+      const pos = this.hitTest(e.clientX, e.clientY, st.pos.string);
+      if (pos.string === st.pos.string && pos.fret === st.pos.fret) return;
+      st.pos = pos;
+      st.voice = this.h.play(pos, { slide: true, prev: st.voice });
+    };
+    const up = (e) => {
+      const st = this.pointers.get(e.pointerId);
+      if (!st) return;
+      this.pointers.delete(e.pointerId);
+      if (st.pending && this.h.canJudge()) this.h.judge(st.pos);
+    };
+    this.svg.addEventListener('pointerdown', down);
+    this.svg.addEventListener('pointermove', move);
+    this.svg.addEventListener('pointerup', up);
+    this.svg.addEventListener('pointercancel', up);
     this.resizeObserver = new ResizeObserver(() => this.render());
     this.resizeObserver.observe(container);
     this.render();
@@ -61,7 +92,7 @@ export class Fretboard {
     return { W, H, padL, padR, padT, padB, hasOpen, unit, colX, colW, rowH, stringY };
   }
 
-  hitTest(clientX, clientY) {
+  hitTest(clientX, clientY, stickString = null) {
     const r = this.svg.getBoundingClientRect();
     const x = clientX - r.left;
     const y = clientY - r.top;
@@ -76,6 +107,8 @@ export class Fretboard {
     for (const s of this.activeStrings) {
       if (Math.abs(L.stringY(s) - y) < Math.abs(L.stringY(string) - y)) string = s;
     }
+    // Under en slide: stanna på samma sträng tills fingret tydligt lämnat den.
+    if (stickString !== null && Math.abs(L.stringY(stickString) - y) < L.rowH * 0.75) string = stickString;
     return { string, fret };
   }
 
