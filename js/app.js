@@ -97,7 +97,14 @@ function quit() {
   show('menu');
 }
 
+function restart() {
+  if (!running) return;
+  running.handle?.stop();
+  start(running.exercise, running.opts);
+}
+
 $('quit').addEventListener('click', quit);
+$('restart').addEventListener('click', restart);
 $('to-menu').addEventListener('click', quit);
 $('again').addEventListener('click', () => start(running.exercise, running.opts));
 
