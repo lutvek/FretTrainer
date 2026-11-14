@@ -18,6 +18,7 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    i positionen. När du hittat tonen spelar du fritt tills nästa ackord.
    Välj Ters, Kvint eller Blandat (slumpas per ackord och ligger fast hela övningen).
 3. **Grundtoner på E, A & D** – som övning 1, men med D-strängen också.
+4. **Grundtoner på A & D** – som övning 1, men på A- och D-strängen.
 
 ## Installera på iPhone (PWA)
 
