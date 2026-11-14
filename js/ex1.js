@@ -17,7 +17,6 @@ const FRET_START = 0;
 const FRET_END = 12;
 const DURATION = 60; // sekunder
 const BPM = 120;
-const PAUSE_MS = 500;
 const COUNT_IN_STEPS = 8; // en takt i åttondelar
 
 function rootsExercise({ id, title, desc, strings: STRINGS }) {
@@ -34,7 +33,6 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
       let prev = null;
       let accepting = false;
       let done = false;
-      let pauseTimer = null;
 
       env.hud.innerHTML = `
       <div class="hud-main">
@@ -122,9 +120,7 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
           }
           updateScore();
           prev = tap;
-          accepting = false;
-          // Kort andningspaus innan nästa ton visas.
-          pauseTimer = setTimeout(showTarget, PAUSE_MS);
+          showTarget(); // nästa ton direkt, utan paus
         },
       });
 
@@ -171,7 +167,6 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
         if (done) return;
         done = true;
         clearInterval(clock);
-        clearTimeout(pauseTimer);
         scheduler.stop();
         audio.fadeOutBus(bus);
         board.destroy();
