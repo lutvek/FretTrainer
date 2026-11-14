@@ -1,0 +1,32 @@
+name: Bugg
+description: Något fungerar inte som det ska.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: vad
+    attributes:
+      label: Vad händer?
+      description: Beskriv felet och vad du hade förväntat dig.
+    validations:
+      required: true
+  - type: textarea
+    id: steg
+    attributes:
+      label: Så återskapar du det
+      placeholder: |
+        1. Öppna övning ...
+        2. Tryck på ...
+    validations:
+      required: true
+  - type: input
+    id: enhet
+    attributes:
+      label: Enhet och webbläsare
+      placeholder: t.ex. iPhone 15, Safari 19
+    validations:
+      required: true
+  - type: textarea
+    id: ovrigt
+    attributes:
+      label: Övrigt
+      description: Skärmdumpar, konsolfel eller annat som hjälper.

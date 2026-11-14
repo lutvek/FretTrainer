@@ -1,0 +1,30 @@
+name: Ny funktion / förbättring
+description: Föreslå något nytt i appen, t.ex. en övning, inställning eller ljud.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: bakgrund
+    attributes:
+      label: Bakgrund
+      description: Vilket behov eller problem löser det här? Vem har nytta av det?
+    validations:
+      required: true
+  - type: textarea
+    id: forslag
+    attributes:
+      label: Förslag
+      description: Hur ska det fungera för användaren?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptans
+    attributes:
+      label: Klart när
+      description: Punktlista med vad som ska gälla för att issuet ska kunna stängas.
+      placeholder: |
+        - [ ] ...
+  - type: textarea
+    id: teknik
+    attributes:
+      label: Tekniska anteckningar
+      description: Berörda filer, idéer om implementation, öppna frågor.
