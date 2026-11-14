@@ -46,3 +46,8 @@ Hörs inget på iPhone? Kontrollera att ringsignalsreglaget inte står på tyst.
 
 En ny övning är ett objekt med `id`, `title`, `desc`, `options` och
 `start(env, opts)` som läggs till i listan i `js/app.js`.
+
+## En enda fil
+
+`tools/build-single.sh` bygger hela appen till en fristående HTML-fil
+(`dist/frettrainer.html`) som kan delas eller publiceras som en sida.
