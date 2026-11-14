@@ -114,7 +114,10 @@ button.ghost {
 }
 .hud-label { color: var(--muted); font-size: 0.85rem; }
 .target-note { font-size: 3.2rem; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
-.target-note .alt { font-size: 1.5rem; font-weight: 600; color: var(--muted); }
+.target-row { display: flex; align-items: baseline; gap: 16px; }
+.target-note { min-width: 1.6em; }
+.next-note { color: var(--muted); font-size: 0.9rem; }
+.next-note b { font-size: 1.5rem; font-weight: 700; margin-left: 4px; }
 .target-note.pop, .target-line.pop { animation: pop 0.25s ease-out; }
 @keyframes pop { from { transform: scale(1.25); color: var(--accent); } to { transform: none; } }
 .target-line { font-size: 1.35rem; margin-top: 2px; }

@@ -6,7 +6,6 @@ import {
   SHARP,
   FLAT,
   STRING_NAMES,
-  isAccidental,
   midiAt,
   nearestPositions,
   pc,
@@ -31,6 +30,7 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
     start(env) {
       const score = { perfect: 0, near: 0, wrong: 0 };
       let target = null;
+      let flats = false; // stavning för aktuell ton, används även på markörerna
       let prev = null;
       let accepting = false;
       let done = false;
@@ -39,7 +39,10 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
       env.hud.innerHTML = `
       <div class="hud-main">
         <div class="hud-label">Hitta tonen</div>
-        <div class="target-note" id="ex1-target">…</div>
+        <div class="target-row">
+            <div class="target-note" id="ex1-target">…</div>
+            <div class="next-note">Nästa <b id="ex1-next">…</b></div>
+          </div>
       </div>
       <div class="hud-side">
         <div class="pill good" title="Rätt plats">✓ <b id="ex1-perfect">0</b></div>
@@ -47,18 +50,27 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
         <div class="pill bad" title="Fel">✗ <b id="ex1-wrong">0</b></div>
       </div>`;
       const targetEl = env.hud.querySelector('#ex1-target');
+      const nextEl = env.hud.querySelector('#ex1-next');
       const updateScore = () => {
         for (const k of Object.keys(score)) env.hud.querySelector(`#ex1-${k}`).textContent = score[k];
       };
 
+      // Varje ton får en slumpad stavning (♯ eller ♭), och nästa ton är alltid förhandsvisad.
+      const draw = (not) => {
+        let p;
+        do p = Math.floor(Math.random() * 12);
+        while (p === not);
+        return { pc: p, name: (Math.random() < 0.5 ? FLAT : SHARP)[p] };
+      };
+      let upcoming = draw(null);
+      const name = (p) => (flats ? FLAT : SHARP)[p];
+
       const showTarget = () => {
-        let next;
-        do next = Math.floor(Math.random() * 12);
-        while (next === target);
-        target = next;
-        targetEl.innerHTML = isAccidental(target)
-          ? `${SHARP[target]}<span class="alt"> / ${FLAT[target]}</span>`
-          : SHARP[target];
+        target = upcoming.pc;
+        flats = upcoming.name !== SHARP[target];
+        targetEl.textContent = upcoming.name;
+        upcoming = draw(target);
+        nextEl.textContent = upcoming.name;
         targetEl.classList.remove('pop');
         void targetEl.offsetWidth;
         targetEl.classList.add('pop');
@@ -75,12 +87,12 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
           if (done) return null;
           const midi = midiAt(pos.string, pos.fret);
           if (!prev || !samePos(pos, prev))
-            board.setMarker('free', { ...pos, label: SHARP[pc(midi)], kind: 'neutral', ttl: 400 });
+            board.setMarker('free', { ...pos, label: name(pc(midi)), kind: 'neutral', ttl: 400 });
           return audio.fretNote(midi, how);
         },
         judge(tap) {
           const midi = midiAt(tap.string, tap.fret);
-          const label = SHARP[pc(midi)];
+          const label = name(pc(midi));
           board.removeMarker('free');
           if (pc(midi) !== target) {
             score.wrong++;
