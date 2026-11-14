@@ -19,7 +19,28 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    Välj Ters, Kvint eller Blandat (slumpas per ackord och ligger fast hela övningen).
 3. **Grundtoner på E, A & D** – som övning 1, men med D-strängen också.
 
-## Testa på telefonen
+## Installera på iPhone (PWA)
+
+Appen är en PWA: den kan läggas på hemskärmen, startar i helskärm och fungerar
+utan nät. Ingen App Store eller utvecklarkonto behövs.
+
+1. Publicera repot med GitHub Pages (en gång): *Settings → Pages → Build and
+   deployment → Source: Deploy from a branch → Branch: `main`, mapp `/ (root)`*.
+   Efter någon minut ligger appen på `https://lutvek.github.io/frettrainer/`.
+   (Pages kräver publikt repo på gratisplanen. Alternativ: Netlify eller Cloudflare Pages.)
+2. Öppna länken i **Safari** på iPhone → dela-knappen → **Lägg till på hemskärmen**.
+3. Dela samma länk med vänner – de gör likadant.
+
+Uppdateringar: pusha till `main`. Appen hämtar alltid senaste versionen när den
+har nät (stäng och öppna den igen), och använder den senast sparade utan nät.
+
+| Fil | Innehåll |
+| --- | --- |
+| `manifest.webmanifest` | Namn, ikoner, helskärmsläge |
+| `sw.js` | Service worker – "nätet först", cache som reserv offline |
+| `icons/` | Appikoner, ritas av `tools/make-icons.py` (Pillow) |
+
+## Testa på telefonen (lokalt)
 
 Datorn och telefonen ska vara på samma wifi.
 
@@ -33,7 +54,8 @@ Ta reda på datorns IP-adress (`ipconfig getifaddr en0` på Mac, `ipconfig` på
 Windows, `hostname -I` på Linux) och öppna `http://<datorns-ip>:8000` i
 telefonens webbläsare. Välj "Lägg till på hemskärmen" för helskärm.
 
-Hörs inget på iPhone? Kontrollera att ringsignalsreglaget inte står på tyst.
+Hörs inget på iPhone? Appen ber om att få spela som media (hörs då även i tyst
+läge, Safari 17+). Hörs ändå inget: kontrollera ringsignalsreglaget och volymen.
 
 ## Struktur
 

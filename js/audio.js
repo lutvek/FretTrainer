@@ -9,6 +9,8 @@ class AudioEngine {
   /** Måste anropas från en användargest (tryck) – annars får webbläsaren inte spela ljud. */
   init() {
     if (!this.ctx) {
+      // Safari 17+: spela som "media" så att ljudet hörs även när ringsignalsreglaget står på tyst.
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* stöds inte */ }
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC({ latencyHint: 'interactive' });
       const comp = this.ctx.createDynamicsCompressor();
