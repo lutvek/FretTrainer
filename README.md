@@ -17,6 +17,7 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    position om 6 band. Hitta tersen eller kvinten i varje ackord, var som helst
    i positionen. När du hittat tonen spelar du fritt tills nästa ackord.
    Välj Ters, Kvint eller Blandat (slumpas per ackord och ligger fast hela övningen).
+3. **Grundtoner på E, A & D** – som övning 1, men med D-strängen också.
 
 ## Testa på telefonen
 

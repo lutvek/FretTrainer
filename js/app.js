@@ -1,8 +1,8 @@
 import { audio } from './audio.js';
-import { ex1 } from './ex1.js';
+import { ex1, ex3 } from './ex1.js';
 import { ex2 } from './ex2.js';
 
-const exercises = [ex1, ex2];
+const exercises = [ex1, ex2, ex3];
 const $ = (id) => document.getElementById(id);
 const screens = { menu: $('menu'), play: $('play'), result: $('result') };
 
