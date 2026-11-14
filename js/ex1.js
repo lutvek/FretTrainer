@@ -16,7 +16,7 @@ import {
 
 const FRET_START = 0;
 const FRET_END = 12;
-const DURATION = 40; // sekunder
+const DURATION = 60; // sekunder
 const BPM = 120;
 const PAUSE_MS = 500;
 const COUNT_IN_STEPS = 8; // en takt i åttondelar
@@ -173,7 +173,7 @@ function rootsExercise({ id, title, desc, strings: STRINGS }) {
 export const ex1 = rootsExercise({
   id: 'roots',
   title: 'Grundtoner på E & A',
-  desc: 'Hitta tonen på E- eller A-strängen – så nära din förra ton som möjligt. 40 sekunder, band 0–12.',
+  desc: 'Hitta tonen på E- eller A-strängen – så nära din förra ton som möjligt. 1 minut, band 0–12.',
   strings: [5, 4],
 });
 
