@@ -158,6 +158,29 @@ button.ghost {
 .chord-chip:not(.active) .chord-progress i { width: 0 !important; }
 .chord-chip.found .chord-progress i { background: var(--good); }
 
+/* Övning 4: tonplatser för ackordets toner och en remsa med 8 ackord */
+.tone-slots { display: flex; gap: 5px; align-items: center; }
+.slot {
+  min-width: 2.1em;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.slot.found { background: var(--good); color: #10131a; }
+.slot-note { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.chord-strip.eight { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; flex: 1 1 100%; }
+.chord-strip.eight .chord-chip { padding: 6px 2px 9px; }
+.chord-strip.eight .chord-name { font-size: 0.95rem; white-space: nowrap; }
+.chord-chip.waiting { border-color: var(--near); opacity: 1; }
+.chord-chip.waiting .chord-progress i { background: var(--near); }
+@media (max-width: 420px) {
+  .chord-strip.eight { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 #board {
   flex: 1 1 auto;
   min-height: 204px;
@@ -237,5 +260,11 @@ button.ghost {
   .chord-chip { padding: 2px 6px 6px; display: flex; justify-content: center; align-items: baseline; gap: 6px; }
   .chord-name { font-size: 1rem; }
   .chord-tone::before { content: ""; }
+  .chord-strip.eight { flex: 1 1 auto; grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .chord-strip.eight .chord-chip { padding: 2px 2px 5px; }
+  .chord-strip.eight .chord-name { font-size: 0.85rem; }
+  .slot { padding: 2px 5px; font-size: 0.85rem; }
+  .ex4-next, .slot-note { display: none; }
+  .chord-strip.eight .chord-chip { display: block; border-radius: 8px; }
   #result { padding-top: 12px; }
 }
