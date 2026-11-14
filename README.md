@@ -11,7 +11,7 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
 1. **Grundtoner på E & A** – en ton visas, hitta den på E- eller A-strängen
    (band 0–12) så nära din förra ton som möjligt. Rätt ton på en annan plats är
    inte fel, men appen visar vilket läge som låg närmare. Trumkomp i 120 bpm,
-   0,5 s paus mellan tonerna, 40 sekunder, sedan poäng: rätt plats / rätt ton
+   nästa ton visas direkt, 1 minut, sedan poäng: rätt plats / rätt ton
    annan plats / fel.
 2. **Ackordstoner** – fyra ackord går på repeat (ca 2 minuter) i en slumpad
    position om 6 band. Hitta tersen eller kvinten i varje ackord, var som helst
