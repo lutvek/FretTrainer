@@ -179,7 +179,10 @@ export function randomTriadProgression(length = 8, rnd = Math.random) {
     if (!loops || sameChord(last, chords[0])) continue;
     const count = (q) => chords.filter((c) => c.quality === q).length;
     if (count('maj') < 2 || count('min') < 2 || count('dim') < 1 || count('dim') > 2) continue;
-    if (new Set(chords.map((c) => c.name)).size < 5 || mods > 2) continue;
+    // Varje ackord får bara förekomma en gång. Dim7 är symmetriska (B°7 = D°7 = F°7 = G♯°7),
+    // så ackord jämförs på sina toner, inte på namnet.
+    const sound = (c) => [...c.pcs].sort((a, b) => a - b).join(',');
+    if (new Set(chords.map(sound)).size < length || mods > 2) continue;
     return chords;
   }
   // Reserv (bör aldrig behövas): C – C♯°7 – Dm – G – Am – F – F♯°7 – G

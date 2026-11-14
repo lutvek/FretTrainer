@@ -10,6 +10,7 @@ import { keyName, midiAt, noteName, pc, randomTriadProgression } from './music.j
 const BPM = 90;
 const STEPS_PER_BAR = 8; // åttondelar i en 4/4-takt
 const LOOPS = 4;
+const COUNT_IN_BEATS = 8; // två takters inräkning
 const CHORDS = 8;
 const WINDOW_FRETS = 5; // 5 band på G, B och e räcker för att alla tonklasser ska finnas
 const STRINGS = [0, 1, 2]; // e, B, G
@@ -208,16 +209,16 @@ export const ex4 = {
       env.feedback('', '');
     };
 
-    // Inräkning: en takt med klick, sedan första ackordet.
+    // Inräkning: två takter med klick, sedan första ackordet.
     const t0 = audio.now + LEAD;
-    for (let i = 0; i < 4; i++) audio.click(t0 + i * 2 * stepDur, bus);
-    scheduleBar(0, t0 + barDur);
+    for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
+    scheduleBar(0, t0 + COUNT_IN_BEATS * 2 * stepDur);
     renderSlots(chords[0]);
     nextEl.textContent = chords[1].name;
     env.feedback('Lyssna in takten …', '');
     env.setTimer(0);
 
-    const startAt = t0 + barDur;
+    const startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
     let raf = requestAnimationFrame(function frame() {
       if (done) return;
       const now = audio.heardNow;
