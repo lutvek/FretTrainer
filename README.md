@@ -31,12 +31,14 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    B-strängen. Följden bygger på funktionsharmonik (t.ex. I–vi–ii–V), inget
    ackord kommer två gånger i rad och sista ackordet leder tillbaka till det
    första. Inräkningen (två takter) startar när du trycker *Redo*. 4 varv i
-   90 bpm, en takt per ackord. Spela ackordets alla tre toner. Hinner du inte
-   innan takten är slut pausas trummor och komp tills du hittat dem.
+   90 bpm, en takt per ackord. Spela ackordets alla tre toner. Med *Vänta på
+   rätt toner* (standard) stannar musiken efter ackordets första slag tills du
+   hittat dem, som i Ackordstoner; utan rullar den på och ackordet räknas som
+   missat.
 6. **Triader på G, B & e – slumpat läge** – svårare variant: helt slumpat läge
    (band 1–10), dim7-ackord (3 av 4 toner räcker, dim7 som ledtonsackord som
    löser upp sig) och tonartsbyten via den nya tonartens V eller vii°7. Varje
-   ackord förekommer bara en gång i följden.
+   ackord förekommer bara en gång i följden. Samma val för *Vänta på rätt toner*.
 
 ## Installera på iPhone (PWA)
 

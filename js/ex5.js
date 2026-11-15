@@ -2,9 +2,10 @@
 // En ackordföljd på 8 ackord går 4 varv i 90 bpm, en takt per ackord.
 // Övning 5 håller sig i en durtonart (skalans egna ackord) i ett läge som passar
 // tonarten. Övning 6 har dim7-ackord och tonartsbyten i ett helt slumpat läge.
-// Spelaren ska hitta alla tre tonerna i ackordet (3 av 4 för dim7). Hinner man inte
-// före taktens slut pausas komp och trummor tills alla toner är hittade.
-// Inräkningen startar först när spelaren trycker Redo.
+// Spelaren ska hitta alla tre tonerna i ackordet (3 av 4 för dim7).
+// Med "Vänta på rätt toner" stannar musiken efter ackordets första slag tills alla
+// toner är hittade (som i Ackordstoner); annars rullar den på och ackordet räknas
+// som missat. Inräkningen startar först när spelaren trycker Redo.
 
 import { audio } from './audio.js';
 import { Fretboard } from './fretboard.js';
@@ -87,9 +88,20 @@ function makeTriadExercise({ id, title, desc, inKey }) {
     id,
     title,
     desc,
-    options: [],
+    options: [
+      {
+        key: 'wait',
+        label: 'Vänta på rätt toner',
+        default: 'on',
+        choices: [
+          { value: 'off', label: 'Nej' },
+          { value: 'on', label: 'Ja' },
+        ],
+      },
+    ],
 
-    start(env) {
+    start(env, opts = {}) {
+      const waitMode = opts.wait !== 'off';
       const chords = randomTriadProgression(CHORDS, Math.random, { diatonic: inKey });
       const fretStart = inKey ? positionForKey(chords) : 1 + Math.floor(Math.random() * 10); // position 1–10
       const fretEnd = fretStart + WINDOW_FRETS - 1;
@@ -101,13 +113,15 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       let v = null;
       for (let pass = 0; pass < 2; pass++) chords.forEach((c) => { v = c.voicing = voice(c.pcs, v); });
 
-      const score = { onTime: 0, paused: 0, wrong: 0 };
-      const bars = []; // { start } i ljudklockans tid, en per inplanerad takt
+      const score = { hits: 0, missed: 0, wrong: 0, findTime: 0 };
+      // { start } = ljudtiden för taktens första slag. I vänteläget flyttas den fram
+      // när musiken fortsätter, så att takten är 8 åttondelar lång räknat från start.
+      const bars = [];
       let cur = -1; // takten som hörs just nu
       let found = new Map(); // tonklass → läge
       let complete = false;
-      let pausedNow = false;
-      let wasPaused = false;
+      let waitingNow = false;
+      let barHeardAt = 0;
       let done = false;
       let endAt = null;
 
@@ -183,22 +197,39 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       // ---- Komp: en takt schemaläggs i taget, först när förra ackordet är klart ----
       const bus = audio.createBus(0.6);
 
-      const scheduleBar = (bar, t) => {
+      // Ett steg (åttondel) i takten. hold = ackordets första slag i vänteläget,
+      // som får klinga ut länge eftersom musiken stannar efter det.
+      const playStep = (bar, s, t, hold) => {
         const chord = chordOf(bar);
-        const next = chordOf(bar + 1);
         const root = bassNote(chord.root);
-        const fifth = root + (chord.quality === 'dim' ? 6 : 7);
-        let approach = bassNote(next.root) - 1;
-        if (approach < 33) approach += 2;
-        for (let s = 0; s < STEPS_PER_BAR; s++) audio.drumStep(s, t + s * stepDur, bus);
-        audio.chord(chord.voicing, t, stepDur * 2.8, bus);
-        audio.chord(chord.voicing, t + 3 * stepDur, stepDur * 4.6, bus);
-        audio.bass(root, t, stepDur * 2.6, bus);
-        audio.bass(root, t + 3 * stepDur, stepDur * 0.9, bus);
-        audio.bass(fifth, t + 4 * stepDur, stepDur * 1.8, bus);
-        audio.bass(root + 12, t + 6 * stepDur, stepDur * 0.9, bus);
-        audio.bass(approach, t + 7 * stepDur, stepDur * 0.9, bus);
-        bars[bar] = { start: t };
+        audio.drumStep(s, t, bus);
+        if (s === 0) {
+          audio.chord(chord.voicing, t, stepDur * (hold ? 16 : 2.8), bus);
+          audio.bass(root, t, stepDur * (hold ? 8 : 2.6), bus);
+        } else if (s === 3) {
+          audio.chord(chord.voicing, t, stepDur * 4.6, bus);
+          audio.bass(root, t, stepDur * 0.9, bus);
+        } else if (s === 4) {
+          audio.bass(root + (chord.quality === 'dim' ? 6 : 7), t, stepDur * 1.8, bus);
+        } else if (s === 6) {
+          audio.bass(root + 12, t, stepDur * 0.9, bus);
+        } else if (s === 7) {
+          let approach = bassNote(chordOf(bar + 1).root) - 1;
+          if (approach < 33) approach += 2;
+          audio.bass(approach, t, stepDur * 0.9, bus);
+        }
+      };
+
+      /** Planerar in steg from…to-1 av takten, där t0 är ljudtiden för taktens första slag. */
+      const scheduleBar = (bar, t0, from = 0, to = STEPS_PER_BAR) => {
+        for (let s = from; s < to; s++) playStep(bar, s, t0 + s * stepDur, waitMode && s === 0);
+        bars[bar] = { start: t0 };
+      };
+
+      // I vänteläget planeras bara första slaget; resten av takten när ackordet är klart.
+      const scheduleNext = (bar, t0) => {
+        if (bar >= totalBars) scheduleEnding(t0);
+        else scheduleBar(bar, t0, 0, waitMode ? 1 : STEPS_PER_BAR);
       };
 
       // Slutackord: första ackordet i följden, så att sista varvet landar.
@@ -214,15 +245,19 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       function onComplete() {
         complete = true;
         const chord = chordOf(cur);
-        if (wasPaused) score.paused++;
-        else score.onTime++;
+        score.hits++;
+        score.findTime += audio.heardNow - barHeardAt;
         chips[cur % CHORDS].classList.add('found');
-        // Nästa takt börjar när den här tar slut – eller direkt om takten redan väntar.
-        const t = Math.max(bars[cur].start + barDur, audio.now + LEAD);
-        if (cur + 1 < totalBars) scheduleBar(cur + 1, t);
-        else scheduleEnding(t);
-        if (pausedNow) {
-          pausedNow = false;
+        chips[cur % CHORDS].classList.remove('waiting');
+        if (waitMode) {
+          // Resten av takten börjar på andra åttondelen – eller direkt om musiken redan väntar.
+          const t1 = Math.max(bars[cur].start + stepDur, audio.now + LEAD);
+          const t0 = t1 - stepDur;
+          scheduleBar(cur, t0, 1, STEPS_PER_BAR);
+          scheduleNext(cur + 1, t0 + barDur);
+        }
+        if (waitingNow) {
+          waitingNow = false;
           env.feedback(`${chord.name} klart – vi kör vidare!`, 'good');
         } else {
           env.feedback(`${chord.name} klart! Spela fritt tills nästa ackord.`, 'good');
@@ -230,11 +265,14 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       }
 
       const enterBar = (bar) => {
+        if (cur >= 0 && !complete) score.missed++;
         cur = bar;
         found = new Map();
         complete = false;
-        pausedNow = false;
-        wasPaused = false;
+        waitingNow = false;
+        barHeardAt = audio.heardNow;
+        // Utan vänteläge rullar musiken på: nästa takt planeras redan nu.
+        if (!waitMode) scheduleNext(bar + 1, bars[bar].start + barDur);
         board.clearMarkers();
         const chord = chordOf(bar);
         const idx = bar % CHORDS;
@@ -269,7 +307,7 @@ function makeTriadExercise({ id, title, desc, inKey }) {
         const t0 = audio.now + LEAD;
         for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
         startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
-        scheduleBar(0, startAt);
+        scheduleNext(0, startAt);
         env.feedback('Lyssna in takten …', '');
         raf = requestAnimationFrame(frame);
       });
@@ -287,22 +325,22 @@ function makeTriadExercise({ id, title, desc, inKey }) {
         if (bars[next] && now >= bars[next].start) enterBar(next);
 
         if (cur >= 0) {
-          const into = now - bars[cur].start;
           const chip = chips[cur % CHORDS];
-          chip.querySelector('i').style.width = `${Math.min(1, into / barDur) * 100}%`;
-          if (!complete && into >= barDur && !pausedNow) {
-            // Takten är slut men ackordet inte klart: kompet står still tills tonerna är hittade.
-            pausedNow = true;
-            wasPaused = true;
+          let into = now - bars[cur].start;
+          if (waitMode && !complete) into = Math.min(into, stepDur); // står still medan musiken väntar
+          chip.querySelector('i').style.width = `${Math.min(1, Math.max(0, into) / barDur) * 100}%`;
+          if (waitMode && !complete && !waitingNow && into >= stepDur) {
+            // Musiken står still efter första slaget tills tonerna är hittade.
+            waitingNow = true;
             chip.classList.add('waiting');
-            audio.chord(chordOf(cur).voicing, audio.now, 3, bus);
-            env.feedback(`Paus – hitta resten av ${chordOf(cur).name}, sedan går takten vidare.`, 'near');
+            env.feedback(`Musiken väntar – hitta tonerna i ${chordOf(cur).name}.`, 'near');
           }
         }
         raf = requestAnimationFrame(frame);
       }
 
       function finish() {
+        if (cur >= 0 && !complete) score.missed++;
         const seconds = Math.round(endAt - startAt);
         stop();
         const keys = [...new Set(chords.map((c) => keyName(c.key)))];
@@ -311,9 +349,11 @@ function makeTriadExercise({ id, title, desc, inKey }) {
           note: `${chords.map((c) => c.name).join(' – ')} · band ${fretStart}–${fretEnd} · `
             + `${keys.length > 1 ? 'tonarter' : 'tonart'} ${keys.join(', ')} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
           stats: [
-            { label: `Ackord i tid (av ${totalBars})`, value: score.onTime, kind: 'good' },
-            { label: 'Ackord som pausade takten', value: score.paused, kind: 'near' },
+            { label: `Klara ackord (av ${totalBars})`, value: score.hits, kind: 'good' },
             { label: 'Feltryck', value: score.wrong, kind: 'bad' },
+            waitMode
+              ? { label: 'Snittid per ackord', value: `${(score.findTime / Math.max(1, score.hits)).toFixed(1).replace('.', ',')} s`, kind: 'near' }
+              : { label: 'Missade ackord', value: score.missed, kind: 'near' },
           ],
         });
       }
@@ -334,13 +374,13 @@ function makeTriadExercise({ id, title, desc, inKey }) {
 export const ex5 = makeTriadExercise({
   id: 'triads-gbe-key',
   title: 'Triader på G, B & e – i tonart',
-  desc: 'En ackordföljd på 8 ackord ur en durskala (dur, moll och skalans dim-ackord) går 4 varv i 90 bpm, en takt per ackord, i ett läge som passar tonarten. Spela ackordets alla tre toner på G-, B- och e-strängen. Hinner du inte pausas takten tills du hittat dem. Inräkningen startar när du trycker Redo.',
+  desc: 'En ackordföljd på 8 ackord ur en durskala (dur, moll och skalans dim-ackord) går 4 varv i 90 bpm, en takt per ackord, i ett läge som passar tonarten. Spela ackordets alla tre toner på G-, B- och e-strängen. Med Vänta på rätt toner stannar musiken efter ackordets första slag tills du hittat dem. Inräkningen startar när du trycker Redo.',
   inKey: true,
 });
 
 export const ex6 = makeTriadExercise({
   id: 'triads-gbe',
   title: 'Triader på G, B & e – slumpat läge',
-  desc: 'Svårare: 8 ackord – dur, moll och dim7 (°7), ibland med tonartsbyte – i ett helt slumpat läge, 4 varv i 90 bpm, en takt per ackord. Spela ackordets alla tre toner (3 av 4 för °7) på G-, B- och e-strängen. Hinner du inte pausas takten tills du hittat dem. Inräkningen startar när du trycker Redo.',
+  desc: 'Svårare: 8 ackord – dur, moll och dim7 (°7), ibland med tonartsbyte – i ett helt slumpat läge, 4 varv i 90 bpm, en takt per ackord. Spela ackordets alla tre toner (3 av 4 för °7) på G-, B- och e-strängen. Med Vänta på rätt toner stannar musiken efter ackordets första slag tills du hittat dem. Inräkningen startar när du trycker Redo.',
   inKey: false,
 });
