@@ -95,6 +95,8 @@ export const QUALITY = {
   maj: { intervals: [0, 4, 7], suffix: '', labels: ['1', '3', '5'], need: 3 },
   min: { intervals: [0, 3, 7], suffix: 'm', labels: ['1', '♭3', '5'], need: 3 },
   dim: { intervals: [0, 3, 6, 9], suffix: '°7', labels: ['1', '♭3', '♭5', '♭♭7'], need: 3 },
+  // Skalans egen vii° (t.ex. B–D–F i C dur), används när följden håller sig i en tonart.
+  dim3: { intervals: [0, 3, 6], suffix: '°', labels: ['1', '♭3', '♭5'], need: 3 },
 };
 
 // Tonarter som stavas med b: F, B♭, E♭, A♭, D♭.
@@ -117,10 +119,10 @@ const STEPS = {
 const MODULATIONS = { 7: 3, 5: 3, 2: 2, 10: 1.2, 3: 1, 9: 1, 8: 1, 1: 0.5 };
 const MOD_WEIGHT = 0.12; // andel av vikten som går till tonartsbyten
 
-function makeChord(key, deg) {
+function makeChord(key, deg, diatonic = false) {
   const st = STEPS[deg];
   const root = pc(key + st.semis);
-  const q = QUALITY[st.q];
+  const q = QUALITY[diatonic && st.q === 'dim' ? 'dim3' : st.q];
   // Höjda dim-ackord (♯iv° osv.) stavas med ♯, övriga efter tonarten.
   const flats = deg.startsWith('♯') ? false : FLAT_KEYS.has(key);
   return {
@@ -138,9 +140,12 @@ function makeChord(key, deg) {
 
 const sameChord = (a, b) => a.root === b.root && a.quality === b.quality;
 
-function options(ch) {
-  const out = Object.entries(STEPS[ch.deg].next).map(([deg, w]) => ({ key: ch.key, deg, w, mod: false }));
-  if (ch.quality !== 'dim') {
+function options(ch, diatonic = false) {
+  const out = Object.entries(STEPS[ch.deg].next)
+    // I en tonart: bara skalans egna ackord, inga höjda dim-ackord.
+    .filter(([deg]) => !diatonic || !deg.startsWith('♯'))
+    .map(([deg, w]) => ({ key: ch.key, deg, w, mod: false }));
+  if (!diatonic && ch.quality !== 'dim') {
     // Dim-ackord måste lösas upp – tonartsbyten görs bara från dur/moll.
     const base = out.reduce((s, o) => s + o.w, 0) * MOD_WEIGHT;
     const modSum = Object.values(MODULATIONS).reduce((s, w) => s + w, 0);
@@ -150,7 +155,7 @@ function options(ch) {
       out.push({ key, deg: 'vii°', w: (base * w * 0.3) / modSum, mod: true });
     }
   }
-  return out.filter((o) => !sameChord(makeChord(o.key, o.deg), ch));
+  return out.filter((o) => !sameChord(makeChord(o.key, o.deg, diatonic), ch));
 }
 
 function weighted(list, rnd) {
@@ -162,19 +167,22 @@ function weighted(list, rnd) {
 /**
  * Slumpar en ackordföljd på `length` ackord som går att spela på repeat:
  * sista ackordet leder tillbaka till det första. Innehåller dur, moll och 1–2 dim.
+ * Med `diatonic` håller sig följden i en durtonart och använder bara skalans sju
+ * ackord (vii° som vanlig dim-triad). Då måste något ackord komma igen, men aldrig
+ * två gånger i rad.
  */
-export function randomTriadProgression(length = 8, rnd = Math.random) {
+export function randomTriadProgression(length = 8, rnd = Math.random, { diatonic = false } = {}) {
   for (let tries = 0; tries < 20000; tries++) {
     const key = Math.floor(rnd() * 12);
-    const chords = [makeChord(key, rnd() < 0.75 ? 'I' : 'vi')];
+    const chords = [makeChord(key, rnd() < 0.75 ? 'I' : 'vi', diatonic)];
     let mods = 0;
     for (let i = 1; i < length; i++) {
-      const o = weighted(options(chords[i - 1]), rnd);
+      const o = weighted(options(chords[i - 1], diatonic), rnd);
       if (o.mod) mods++;
-      chords.push(makeChord(o.key, o.deg));
+      chords.push(makeChord(o.key, o.deg, diatonic));
     }
     const last = chords[length - 1];
-    const loops = options(last).some((o) => !o.mod && sameChord(makeChord(o.key, o.deg), chords[0]))
+    const loops = options(last, diatonic).some((o) => !o.mod && sameChord(makeChord(o.key, o.deg, diatonic), chords[0]))
       || (last.deg === 'V' || last.deg === 'vii°') && pc(last.key - chords[0].root) === 0;
     if (!loops || sameChord(last, chords[0])) continue;
     const count = (q) => chords.filter((c) => c.quality === q).length;
@@ -182,8 +190,17 @@ export function randomTriadProgression(length = 8, rnd = Math.random) {
     // Varje ackord får bara förekomma en gång. Dim7 är symmetriska (B°7 = D°7 = F°7 = G♯°7),
     // så ackord jämförs på sina toner, inte på namnet.
     const sound = (c) => [...c.pcs].sort((a, b) => a - b).join(',');
-    if (new Set(chords.map(sound)).size < length || mods > 2) continue;
+    const distinct = new Set(chords.map(sound)).size;
+    if (diatonic) {
+      // 8 ackord ur en skala med 7: minst 6 olika, inget fler än två gånger.
+      const most = Math.max(...chords.map((c) => chords.filter((d) => sound(d) === sound(c)).length));
+      if (distinct < Math.min(6, length) || most > 2) continue;
+    } else if (distinct < length || mods > 2) continue;
     return chords;
+  }
+  if (diatonic) {
+    // Reserv i C dur: C – Am – F – Dm – G – Em – Am – G (G leder tillbaka till C).
+    return ['I', 'vi', 'IV', 'ii', 'V', 'iii', 'vi', 'V'].map((d) => makeChord(0, d, true));
   }
   // Reserv (bör aldrig behövas): C – C♯°7 – Dm – G – Am – F – F♯°7 – G
   return ['I', '♯i°', 'ii', 'V', 'vi', 'IV', '♯iv°', 'V'].map((d) => makeChord(0, d));

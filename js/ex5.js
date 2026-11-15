@@ -1,5 +1,7 @@
-// Övning 5: triader på de tre ljusaste strängarna (G, B, e) i en position.
-// En ackordföljd på 8 ackord (dur, moll, dim7) går 4 varv i 90 bpm, en takt per ackord.
+// Övning 5 och 6: triader på de tre ljusaste strängarna (G, B, e) i en position.
+// En ackordföljd på 8 ackord går 4 varv i 90 bpm, en takt per ackord.
+// Övning 5 håller sig i en durtonart (skalans egna ackord) i ett läge som passar
+// tonarten. Övning 6 har dim7-ackord och tonartsbyten i ett helt slumpat läge.
 // Spelaren ska hitta alla tre tonerna i ackordet (3 av 4 för dim7). Hinner man inte
 // före taktens slut pausas komp och trummor tills alla toner är hittade.
 // Inräkningen startar först när spelaren trycker Redo.
@@ -42,249 +44,303 @@ function voice(pcs, prev) {
   return best.notes;
 }
 
-export const ex5 = {
-  id: 'triads-gbe',
-  title: 'Triader på G, B & e',
-  desc: 'En ackordföljd på 8 ackord – dur, moll och dim7 (°7), ibland med tonartsbyte – går 4 varv i 90 bpm, en takt per ackord. Spela ackordets alla tre toner (3 av 4 för °7) på G-, B- och e-strängen i positionen. Hinner du inte pausas takten tills du hittat dem. Inräkningen startar när du trycker Redo.',
-  options: [],
+/** Bandintervall [start, slut] med start 1–10. */
+const windowAt = (start) => [start, start + WINDOW_FRETS - 1];
 
-  start(env) {
-    const chords = randomTriadProgression(CHORDS);
-    const fretStart = 1 + Math.floor(Math.random() * 10); // position 1–10
-    const fretEnd = fretStart + WINDOW_FRETS - 1;
-    const totalBars = LOOPS * CHORDS;
-    const stepDur = 60 / BPM / 2;
-    const barDur = STEPS_PER_BAR * stepDur;
+/** Finns en sluten form (en ton per sträng, högst 4 band brett) för ackordet i fönstret? */
+function hasCompactShape(chord, start, end) {
+  const want = [...chord.pcs].sort((a, b) => a - b).join(',');
+  for (let g = start; g <= end; g++) {
+    for (let b = start; b <= end; b++) {
+      for (let e = start; e <= end; e++) {
+        if (Math.max(g, b, e) - Math.min(g, b, e) > 3) continue;
+        const got = [midiAt(2, g), midiAt(1, b), midiAt(0, e)].map(pc);
+        if (new Set(got).size === 3 && [...got].sort((x, y) => x - y).join(',') === want) return true;
+      }
+    }
+  }
+  return false;
+}
 
-    // Komp-voicings räknas fram en gång och följer varandra runt hela loopen.
-    let v = null;
-    for (let pass = 0; pass < 2; pass++) chords.forEach((c) => { v = c.voicing = voice(c.pcs, v); });
+/**
+ * Läge som passar tonarten: det fönster där flest av följdens ackord har en sluten
+ * form, och där tonikan ligger på G- eller B-strängen. Lika bra fönster lottas.
+ */
+function positionForKey(chords) {
+  const tonic = chords[0].key;
+  const unique = [...new Map(chords.map((c) => [c.name, c])).values()];
+  let best = [];
+  let bestScore = -1;
+  for (let start = 1; start <= 10; start++) {
+    const [lo, hi] = windowAt(start);
+    let score = unique.filter((c) => hasCompactShape(c, lo, hi)).length * 2;
+    for (let f = lo; f <= hi; f++) {
+      if (pc(midiAt(2, f)) === tonic || pc(midiAt(1, f)) === tonic) { score += 1; break; }
+    }
+    if (score > bestScore) { bestScore = score; best = [start]; } else if (score === bestScore) best.push(start);
+  }
+  return best[Math.floor(Math.random() * best.length)];
+}
 
-    const score = { onTime: 0, paused: 0, wrong: 0 };
-    const bars = []; // { start } i ljudklockans tid, en per inplanerad takt
-    let cur = -1; // takten som hörs just nu
-    let found = new Map(); // tonklass → läge
-    let complete = false;
-    let pausedNow = false;
-    let wasPaused = false;
-    let done = false;
-    let endAt = null;
+function makeTriadExercise({ id, title, desc, inKey }) {
+  return {
+    id,
+    title,
+    desc,
+    options: [],
 
-    env.hud.innerHTML = `
-      <div class="hud-main">
-        <div class="hud-label">Band ${fretStart}–${fretEnd} · G, B, e · <span id="ex5-loop">Varv 1/${LOOPS}</span></div>
-        <div class="target-row">
-          <div class="target-note" id="ex5-chord">${chords[0].name}</div>
-          <button class="primary ready-btn" id="ex5-ready">Redo</button>
-          <div class="tone-slots" id="ex5-slots" hidden></div>
-          <div class="next-note ex5-next">Nästa <b id="ex5-next">…</b></div>
+    start(env) {
+      const chords = randomTriadProgression(CHORDS, Math.random, { diatonic: inKey });
+      const fretStart = inKey ? positionForKey(chords) : 1 + Math.floor(Math.random() * 10); // position 1–10
+      const fretEnd = fretStart + WINDOW_FRETS - 1;
+      const totalBars = LOOPS * CHORDS;
+      const stepDur = 60 / BPM / 2;
+      const barDur = STEPS_PER_BAR * stepDur;
+
+      // Komp-voicings räknas fram en gång och följer varandra runt hela loopen.
+      let v = null;
+      for (let pass = 0; pass < 2; pass++) chords.forEach((c) => { v = c.voicing = voice(c.pcs, v); });
+
+      const score = { onTime: 0, paused: 0, wrong: 0 };
+      const bars = []; // { start } i ljudklockans tid, en per inplanerad takt
+      let cur = -1; // takten som hörs just nu
+      let found = new Map(); // tonklass → läge
+      let complete = false;
+      let pausedNow = false;
+      let wasPaused = false;
+      let done = false;
+      let endAt = null;
+
+      env.hud.innerHTML = `
+        <div class="hud-main">
+          <div class="hud-label">${inKey ? `${keyName(chords[0].key)} dur · ` : ''}Band ${fretStart}–${fretEnd} · G, B, e · <span id="ex5-loop">Varv 1/${LOOPS}</span></div>
+          <div class="target-row">
+            <div class="target-note" id="ex5-chord">${chords[0].name}</div>
+            <button class="primary ready-btn" id="ex5-ready">Redo</button>
+            <div class="tone-slots" id="ex5-slots" hidden></div>
+            <div class="next-note ex5-next">Nästa <b id="ex5-next">…</b></div>
+          </div>
         </div>
-      </div>
-      <div class="chord-strip eight">
-        ${chords.map((c, i) => `
-          <div class="chord-chip" data-i="${i}">
-            <div class="chord-name">${c.name}</div>
-            <div class="chord-progress"><i></i></div>
-          </div>`).join('')}
-      </div>`;
-    const chordEl = env.hud.querySelector('#ex5-chord');
-    const slotsEl = env.hud.querySelector('#ex5-slots');
-    const nextEl = env.hud.querySelector('#ex5-next');
-    const loopEl = env.hud.querySelector('#ex5-loop');
-    const chips = [...env.hud.querySelectorAll('.chord-chip')];
+        <div class="chord-strip eight">
+          ${chords.map((c, i) => `
+            <div class="chord-chip" data-i="${i}">
+              <div class="chord-name">${c.name}</div>
+              <div class="chord-progress"><i></i></div>
+            </div>`).join('')}
+        </div>`;
+      const chordEl = env.hud.querySelector('#ex5-chord');
+      const slotsEl = env.hud.querySelector('#ex5-slots');
+      const nextEl = env.hud.querySelector('#ex5-next');
+      const loopEl = env.hud.querySelector('#ex5-loop');
+      const chips = [...env.hud.querySelectorAll('.chord-chip')];
 
-    const chordOf = (bar) => chords[bar % CHORDS];
+      const chordOf = (bar) => chords[bar % CHORDS];
 
-    const renderSlots = (chord) => {
-      slotsEl.innerHTML = chord.pcs.map((p, i) => {
-        const hit = found.has(p);
-        return `<span class="slot${hit ? ' found' : ''}">${hit ? noteName(p, chord.flats) : chord.labels[i]}</span>`;
-      }).join('') + (chord.need < chord.pcs.length ? '<span class="slot-note">3 av 4</span>' : '');
-    };
+      const renderSlots = (chord) => {
+        slotsEl.innerHTML = chord.pcs.map((p, i) => {
+          const hit = found.has(p);
+          return `<span class="slot${hit ? ' found' : ''}">${hit ? noteName(p, chord.flats) : chord.labels[i]}</span>`;
+        }).join('') + (chord.need < chord.pcs.length ? '<span class="slot-note">3 av 4</span>' : '');
+      };
 
-    const board = new Fretboard(env.board, {
-      fretStart,
-      fretEnd,
-      activeStrings: STRINGS,
-      canJudge: () => !done && cur >= 0 && !complete,
-      isHit: (pos) => chordOf(cur).pcs.includes(pc(midiAt(pos.string, pos.fret))),
-      play(pos, how) {
-        if (done) return null;
-        const midi = midiAt(pos.string, pos.fret);
-        const flats = chordOf(Math.max(cur, 0)).flats;
-        board.setMarker('free', { ...pos, label: noteName(midi, flats), kind: 'neutral', ttl: 500 });
-        return audio.fretNote(midi, how);
-      },
-      judge(pos) {
+      const board = new Fretboard(env.board, {
+        fretStart,
+        fretEnd,
+        activeStrings: STRINGS,
+        canJudge: () => !done && cur >= 0 && !complete,
+        isHit: (pos) => chordOf(cur).pcs.includes(pc(midiAt(pos.string, pos.fret))),
+        play(pos, how) {
+          if (done) return null;
+          const midi = midiAt(pos.string, pos.fret);
+          const flats = chordOf(Math.max(cur, 0)).flats;
+          board.setMarker('free', { ...pos, label: noteName(midi, flats), kind: 'neutral', ttl: 500 });
+          return audio.fretNote(midi, how);
+        },
+        judge(pos) {
+          const chord = chordOf(cur);
+          const p = pc(midiAt(pos.string, pos.fret));
+          const label = noteName(p, chord.flats);
+          board.removeMarker('free');
+          if (!chord.pcs.includes(p)) {
+            score.wrong++;
+            board.setMarker('bad', { ...pos, label, kind: 'bad', ttl: 800 });
+            env.feedback(`${label} finns inte i ${chord.name}.`, 'bad');
+            return;
+          }
+          board.removeMarker('bad');
+          if (found.has(p)) {
+            env.feedback(`${label} har du redan – leta efter de andra.`, '');
+            return;
+          }
+          found.set(p, pos);
+          board.setMarker(`t${p}`, { ...pos, label, kind: 'good' });
+          renderSlots(chord);
+          if (found.size >= chord.need) onComplete();
+          else env.feedback(`${label} ✓`, 'good');
+        },
+      });
+
+      // ---- Komp: en takt schemaläggs i taget, först när förra ackordet är klart ----
+      const bus = audio.createBus(0.6);
+
+      const scheduleBar = (bar, t) => {
+        const chord = chordOf(bar);
+        const next = chordOf(bar + 1);
+        const root = bassNote(chord.root);
+        const fifth = root + (chord.quality === 'dim' ? 6 : 7);
+        let approach = bassNote(next.root) - 1;
+        if (approach < 33) approach += 2;
+        for (let s = 0; s < STEPS_PER_BAR; s++) audio.drumStep(s, t + s * stepDur, bus);
+        audio.chord(chord.voicing, t, stepDur * 2.8, bus);
+        audio.chord(chord.voicing, t + 3 * stepDur, stepDur * 4.6, bus);
+        audio.bass(root, t, stepDur * 2.6, bus);
+        audio.bass(root, t + 3 * stepDur, stepDur * 0.9, bus);
+        audio.bass(fifth, t + 4 * stepDur, stepDur * 1.8, bus);
+        audio.bass(root + 12, t + 6 * stepDur, stepDur * 0.9, bus);
+        audio.bass(approach, t + 7 * stepDur, stepDur * 0.9, bus);
+        bars[bar] = { start: t };
+      };
+
+      // Slutackord: första ackordet i följden, så att sista varvet landar.
+      const scheduleEnding = (t) => {
+        const chord = chords[0];
+        audio.kick(t, bus);
+        audio.hat(t, bus, 0.2);
+        audio.chord(chord.voicing, t, 2.4, bus);
+        audio.bass(bassNote(chord.root), t, 2.2, bus);
+        endAt = t + 1.6;
+      };
+
+      function onComplete() {
+        complete = true;
         const chord = chordOf(cur);
-        const p = pc(midiAt(pos.string, pos.fret));
-        const label = noteName(p, chord.flats);
-        board.removeMarker('free');
-        if (!chord.pcs.includes(p)) {
-          score.wrong++;
-          board.setMarker('bad', { ...pos, label, kind: 'bad', ttl: 800 });
-          env.feedback(`${label} finns inte i ${chord.name}.`, 'bad');
-          return;
+        if (wasPaused) score.paused++;
+        else score.onTime++;
+        chips[cur % CHORDS].classList.add('found');
+        // Nästa takt börjar när den här tar slut – eller direkt om takten redan väntar.
+        const t = Math.max(bars[cur].start + barDur, audio.now + LEAD);
+        if (cur + 1 < totalBars) scheduleBar(cur + 1, t);
+        else scheduleEnding(t);
+        if (pausedNow) {
+          pausedNow = false;
+          env.feedback(`${chord.name} klart – vi kör vidare!`, 'good');
+        } else {
+          env.feedback(`${chord.name} klart! Spela fritt tills nästa ackord.`, 'good');
         }
-        board.removeMarker('bad');
-        if (found.has(p)) {
-          env.feedback(`${label} har du redan – leta efter de andra.`, '');
-          return;
-        }
-        found.set(p, pos);
-        board.setMarker(`t${p}`, { ...pos, label, kind: 'good' });
-        renderSlots(chord);
-        if (found.size >= chord.need) onComplete();
-        else env.feedback(`${label} ✓`, 'good');
-      },
-    });
+      }
 
-    // ---- Komp: en takt schemaläggs i taget, först när förra ackordet är klart ----
-    const bus = audio.createBus(0.6);
-
-    const scheduleBar = (bar, t) => {
-      const chord = chordOf(bar);
-      const next = chordOf(bar + 1);
-      const root = bassNote(chord.root);
-      const fifth = root + (chord.quality === 'dim' ? 6 : 7);
-      let approach = bassNote(next.root) - 1;
-      if (approach < 33) approach += 2;
-      for (let s = 0; s < STEPS_PER_BAR; s++) audio.drumStep(s, t + s * stepDur, bus);
-      audio.chord(chord.voicing, t, stepDur * 2.8, bus);
-      audio.chord(chord.voicing, t + 3 * stepDur, stepDur * 4.6, bus);
-      audio.bass(root, t, stepDur * 2.6, bus);
-      audio.bass(root, t + 3 * stepDur, stepDur * 0.9, bus);
-      audio.bass(fifth, t + 4 * stepDur, stepDur * 1.8, bus);
-      audio.bass(root + 12, t + 6 * stepDur, stepDur * 0.9, bus);
-      audio.bass(approach, t + 7 * stepDur, stepDur * 0.9, bus);
-      bars[bar] = { start: t };
-    };
-
-    // Slutackord: första ackordet i följden, så att sista varvet landar.
-    const scheduleEnding = (t) => {
-      const chord = chords[0];
-      audio.kick(t, bus);
-      audio.hat(t, bus, 0.2);
-      audio.chord(chord.voicing, t, 2.4, bus);
-      audio.bass(bassNote(chord.root), t, 2.2, bus);
-      endAt = t + 1.6;
-    };
-
-    function onComplete() {
-      complete = true;
-      const chord = chordOf(cur);
-      if (wasPaused) score.paused++;
-      else score.onTime++;
-      chips[cur % CHORDS].classList.add('found');
-      // Nästa takt börjar när den här tar slut – eller direkt om takten redan väntar.
-      const t = Math.max(bars[cur].start + barDur, audio.now + LEAD);
-      if (cur + 1 < totalBars) scheduleBar(cur + 1, t);
-      else scheduleEnding(t);
-      if (pausedNow) {
+      const enterBar = (bar) => {
+        cur = bar;
+        found = new Map();
+        complete = false;
         pausedNow = false;
-        env.feedback(`${chord.name} klart – vi kör vidare!`, 'good');
-      } else {
-        env.feedback(`${chord.name} klart! Spela fritt tills nästa ackord.`, 'good');
-      }
-    }
+        wasPaused = false;
+        board.clearMarkers();
+        const chord = chordOf(bar);
+        const idx = bar % CHORDS;
+        chips.forEach((c, i) => {
+          c.classList.toggle('active', i === idx);
+          c.classList.remove('found', 'waiting');
+        });
+        chordEl.textContent = chord.name;
+        chordEl.classList.remove('pop');
+        void chordEl.offsetWidth;
+        chordEl.classList.add('pop');
+        nextEl.textContent = bar + 1 < totalBars ? chordOf(bar + 1).name : '–';
+        loopEl.textContent = `Varv ${Math.floor(bar / CHORDS) + 1}/${LOOPS}`;
+        renderSlots(chord);
+        env.feedback('', '');
+      };
 
-    const enterBar = (bar) => {
-      cur = bar;
-      found = new Map();
-      complete = false;
-      pausedNow = false;
-      wasPaused = false;
-      board.clearMarkers();
-      const chord = chordOf(bar);
-      const idx = bar % CHORDS;
-      chips.forEach((c, i) => {
-        c.classList.toggle('active', i === idx);
-        c.classList.remove('found', 'waiting');
+      renderSlots(chords[0]);
+      nextEl.textContent = chords[1].name;
+      env.feedback('Orientera dig på greppbrädan och tryck Redo.', '');
+      env.setTimer(0);
+
+      // Inräkningen (två takter med klick) börjar först när spelaren trycker Redo.
+      // Fram till dess är det fritt spel.
+      let startAt = 0;
+      let raf = 0;
+      const readyBtn = env.hud.querySelector('#ex5-ready');
+      readyBtn.addEventListener('click', () => {
+        if (done) return;
+        readyBtn.remove();
+        slotsEl.hidden = false;
+        const t0 = audio.now + LEAD;
+        for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
+        startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
+        scheduleBar(0, startAt);
+        env.feedback('Lyssna in takten …', '');
+        raf = requestAnimationFrame(frame);
       });
-      chordEl.textContent = chord.name;
-      chordEl.classList.remove('pop');
-      void chordEl.offsetWidth;
-      chordEl.classList.add('pop');
-      nextEl.textContent = bar + 1 < totalBars ? chordOf(bar + 1).name : '–';
-      loopEl.textContent = `Varv ${Math.floor(bar / CHORDS) + 1}/${LOOPS}`;
-      renderSlots(chord);
-      env.feedback('', '');
-    };
 
-    renderSlots(chords[0]);
-    nextEl.textContent = chords[1].name;
-    env.feedback('Orientera dig på greppbrädan och tryck Redo.', '');
-    env.setTimer(0);
+      function frame() {
+        if (done) return;
+        const now = audio.heardNow;
+        env.setTimer(Math.max(0, Math.floor(now - startAt)));
 
-    // Inräkningen (två takter med klick) börjar först när spelaren trycker Redo.
-    // Fram till dess är det fritt spel.
-    let startAt = 0;
-    let raf = 0;
-    const readyBtn = env.hud.querySelector('#ex5-ready');
-    readyBtn.addEventListener('click', () => {
-      if (done) return;
-      readyBtn.remove();
-      slotsEl.hidden = false;
-      const t0 = audio.now + LEAD;
-      for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
-      startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
-      scheduleBar(0, startAt);
-      env.feedback('Lyssna in takten …', '');
-      raf = requestAnimationFrame(frame);
-    });
-
-    function frame() {
-      if (done) return;
-      const now = audio.heardNow;
-      env.setTimer(Math.max(0, Math.floor(now - startAt)));
-
-      if (endAt !== null && now >= endAt) {
-        finish();
-        return;
-      }
-      const next = cur + 1;
-      if (bars[next] && now >= bars[next].start) enterBar(next);
-
-      if (cur >= 0) {
-        const into = now - bars[cur].start;
-        const chip = chips[cur % CHORDS];
-        chip.querySelector('i').style.width = `${Math.min(1, into / barDur) * 100}%`;
-        if (!complete && into >= barDur && !pausedNow) {
-          // Takten är slut men ackordet inte klart: kompet står still tills tonerna är hittade.
-          pausedNow = true;
-          wasPaused = true;
-          chip.classList.add('waiting');
-          audio.chord(chordOf(cur).voicing, audio.now, 3, bus);
-          env.feedback(`Paus – hitta resten av ${chordOf(cur).name}, sedan går takten vidare.`, 'near');
+        if (endAt !== null && now >= endAt) {
+          finish();
+          return;
         }
+        const next = cur + 1;
+        if (bars[next] && now >= bars[next].start) enterBar(next);
+
+        if (cur >= 0) {
+          const into = now - bars[cur].start;
+          const chip = chips[cur % CHORDS];
+          chip.querySelector('i').style.width = `${Math.min(1, into / barDur) * 100}%`;
+          if (!complete && into >= barDur && !pausedNow) {
+            // Takten är slut men ackordet inte klart: kompet står still tills tonerna är hittade.
+            pausedNow = true;
+            wasPaused = true;
+            chip.classList.add('waiting');
+            audio.chord(chordOf(cur).voicing, audio.now, 3, bus);
+            env.feedback(`Paus – hitta resten av ${chordOf(cur).name}, sedan går takten vidare.`, 'near');
+          }
+        }
+        raf = requestAnimationFrame(frame);
       }
-      raf = requestAnimationFrame(frame);
-    }
 
-    function finish() {
-      const seconds = Math.round(endAt - startAt);
-      stop();
-      const keys = [...new Set(chords.map((c) => keyName(c.key)))];
-      env.finish({
-        title: 'Triader på G, B & e',
-        note: `${chords.map((c) => c.name).join(' – ')} · band ${fretStart}–${fretEnd} · `
-          + `${keys.length > 1 ? 'tonarter' : 'tonart'} ${keys.join(', ')} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
-        stats: [
-          { label: `Ackord i tid (av ${totalBars})`, value: score.onTime, kind: 'good' },
-          { label: 'Ackord som pausade takten', value: score.paused, kind: 'near' },
-          { label: 'Feltryck', value: score.wrong, kind: 'bad' },
-        ],
-      });
-    }
+      function finish() {
+        const seconds = Math.round(endAt - startAt);
+        stop();
+        const keys = [...new Set(chords.map((c) => keyName(c.key)))];
+        env.finish({
+          title,
+          note: `${chords.map((c) => c.name).join(' – ')} · band ${fretStart}–${fretEnd} · `
+            + `${keys.length > 1 ? 'tonarter' : 'tonart'} ${keys.join(', ')} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
+          stats: [
+            { label: `Ackord i tid (av ${totalBars})`, value: score.onTime, kind: 'good' },
+            { label: 'Ackord som pausade takten', value: score.paused, kind: 'near' },
+            { label: 'Feltryck', value: score.wrong, kind: 'bad' },
+          ],
+        });
+      }
 
-    function stop() {
-      if (done) return;
-      done = true;
-      cancelAnimationFrame(raf);
-      audio.fadeOutBus(bus);
-      board.destroy();
-    }
+      function stop() {
+        if (done) return;
+        done = true;
+        cancelAnimationFrame(raf);
+        audio.fadeOutBus(bus);
+        board.destroy();
+      }
 
-    return { stop };
-  },
-};
+      return { stop };
+    },
+  };
+}
+
+export const ex5 = makeTriadExercise({
+  id: 'triads-gbe-key',
+  title: 'Triader på G, B & e – i tonart',
+  desc: 'En ackordföljd på 8 ackord ur en durskala (dur, moll och skalans dim-ackord) går 4 varv i 90 bpm, en takt per ackord, i ett läge som passar tonarten. Spela ackordets alla tre toner på G-, B- och e-strängen. Hinner du inte pausas takten tills du hittat dem. Inräkningen startar när du trycker Redo.',
+  inKey: true,
+});
+
+export const ex6 = makeTriadExercise({
+  id: 'triads-gbe',
+  title: 'Triader på G, B & e – slumpat läge',
+  desc: 'Svårare: 8 ackord – dur, moll och dim7 (°7), ibland med tonartsbyte – i ett helt slumpat läge, 4 varv i 90 bpm, en takt per ackord. Spela ackordets alla tre toner (3 av 4 för °7) på G-, B- och e-strängen. Hinner du inte pausas takten tills du hittat dem. Inräkningen startar när du trycker Redo.',
+  inKey: false,
+});

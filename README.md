@@ -24,14 +24,19 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    utifrån den. Välj naturliga toner eller alla 12, och 4, 3 eller 2 takter per
    ton. Missade platser visas streckade. Poäng: hittade / missade platser, fel
    och kompletta toner.
-5. **Triader på G, B & e** – en slumpad ackordföljd på 8 ackord (dur, moll och
-   dim7) i en position om 5 band på de tre ljusaste strängarna. Följden bygger på
-   funktionsharmonik (t.ex. I–vi–ii–V, dim7 som ledtonsackord som löser upp sig)
-   och kan byta tonart via den nya tonartens V eller vii°7, och sista ackordet
-   leder tillbaka till det första. Inräkningen (två takter) startar när du
-   trycker *Redo*. 4 varv i 90 bpm, en takt per ackord. Spela ackordets alla tre
-   toner (3 av 4 för dim7). Hinner du inte innan takten är slut pausas trummor
-   och komp tills du hittat dem.
+5. **Triader på G, B & e – i tonart** – en slumpad ackordföljd på 8 ackord ur en
+   durskala (skalans dur- och mollackord och vii°), i en position om 5 band på de
+   tre ljusaste strängarna. Läget väljs efter tonarten: det fönster där flest av
+   följdens ackord har en sluten form och där tonikan finns på G- eller
+   B-strängen. Följden bygger på funktionsharmonik (t.ex. I–vi–ii–V), inget
+   ackord kommer två gånger i rad och sista ackordet leder tillbaka till det
+   första. Inräkningen (två takter) startar när du trycker *Redo*. 4 varv i
+   90 bpm, en takt per ackord. Spela ackordets alla tre toner. Hinner du inte
+   innan takten är slut pausas trummor och komp tills du hittat dem.
+6. **Triader på G, B & e – slumpat läge** – svårare variant: helt slumpat läge
+   (band 1–10), dim7-ackord (3 av 4 toner räcker, dim7 som ledtonsackord som
+   löser upp sig) och tonartsbyten via den nya tonartens V eller vii°7. Varje
+   ackord förekommer bara en gång i följden.
 
 ## Installera på iPhone (PWA)
 
