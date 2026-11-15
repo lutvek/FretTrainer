@@ -131,7 +131,6 @@ function makeTriadExercise({ id, title, desc, inKey }) {
           <div class="target-row">
             <div class="target-note" id="ex5-chord">${chords[0].name}</div>
             <button class="primary ready-btn" id="ex5-ready">Redo</button>
-            <div class="tone-slots" id="ex5-slots" hidden></div>
             <div class="next-note ex5-next">Nästa <b id="ex5-next">…</b></div>
           </div>
         </div>
@@ -143,19 +142,11 @@ function makeTriadExercise({ id, title, desc, inKey }) {
             </div>`).join('')}
         </div>`;
       const chordEl = env.hud.querySelector('#ex5-chord');
-      const slotsEl = env.hud.querySelector('#ex5-slots');
       const nextEl = env.hud.querySelector('#ex5-next');
       const loopEl = env.hud.querySelector('#ex5-loop');
       const chips = [...env.hud.querySelectorAll('.chord-chip')];
 
       const chordOf = (bar) => chords[bar % CHORDS];
-
-      const renderSlots = (chord) => {
-        slotsEl.innerHTML = chord.pcs.map((p, i) => {
-          const hit = found.has(p);
-          return `<span class="slot${hit ? ' found' : ''}">${hit ? noteName(p, chord.flats) : chord.labels[i]}</span>`;
-        }).join('') + (chord.need < chord.pcs.length ? '<span class="slot-note">3 av 4</span>' : '');
-      };
 
       const board = new Fretboard(env.board, {
         fretStart,
@@ -188,7 +179,6 @@ function makeTriadExercise({ id, title, desc, inKey }) {
           }
           found.set(p, pos);
           board.setMarker(`t${p}`, { ...pos, label, kind: 'good' });
-          renderSlots(chord);
           if (found.size >= chord.need) onComplete();
           else env.feedback(`${label} ✓`, 'good');
         },
@@ -286,14 +276,12 @@ function makeTriadExercise({ id, title, desc, inKey }) {
         chordEl.classList.add('pop');
         nextEl.textContent = bar + 1 < totalBars ? chordOf(bar + 1).name : '–';
         loopEl.textContent = `Varv ${Math.floor(bar / CHORDS) + 1}/${LOOPS}`;
-        renderSlots(chord);
         env.feedback('', '');
       };
 
-      renderSlots(chords[0]);
       nextEl.textContent = chords[1].name;
       env.feedback('Orientera dig på greppbrädan och tryck Redo.', '');
-      env.setTimer(0);
+      env.setTimer(null); // ingen klocka – ackordföljden visar var vi är
 
       // Inräkningen (två takter med klick) börjar först när spelaren trycker Redo.
       // Fram till dess är det fritt spel.
@@ -303,7 +291,6 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       readyBtn.addEventListener('click', () => {
         if (done) return;
         readyBtn.remove();
-        slotsEl.hidden = false;
         const t0 = audio.now + LEAD;
         for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
         startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
@@ -315,7 +302,6 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       function frame() {
         if (done) return;
         const now = audio.heardNow;
-        env.setTimer(Math.max(0, Math.floor(now - startAt)));
 
         if (endAt !== null && now >= endAt) {
           finish();

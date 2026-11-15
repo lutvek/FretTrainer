@@ -89,8 +89,11 @@ function start(exercise, opts) {
   const env = {
     hud: $('hud'),
     board: $('board'),
+    // null döljer klockan (för övningar utan tidsgräns).
     setTimer(sec) {
-      $('timer').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      const el = $('timer');
+      el.style.display = sec == null ? 'none' : '';
+      if (sec != null) el.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
     },
     feedback(text, kind) {
       fb.textContent = text;
