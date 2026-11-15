@@ -18,7 +18,7 @@ const TONE = {
 export const ex2 = {
   id: 'chord-tones',
   title: 'Ackordstoner',
-  desc: 'Fyra ackord går på repeat. Hitta tersen eller kvinten i varje ackord, var som helst i positionen. Ca 2 minuter. Välj om musiken ska stanna och vänta när du inte hunnit hitta tonen.',
+  desc: 'Fyra ackord går på repeat. Hitta tersen eller kvinten i varje ackord, var som helst i positionen. Ca 2 minuter. Välj om musiken ska stanna på första slaget i varje ackord och vänta tills du hittat tonen.',
   options: [
     {
       key: 'tones',
@@ -59,13 +59,14 @@ export const ex2 = {
     const totalSteps = totalWindows * STEPS_PER_CHORD;
     const waitMode = opts.wait === 'on';
 
-    const score = { hits: 0, wrong: 0, missed: 0, stops: 0 };
+    const score = { hits: 0, wrong: 0, missed: 0, findTime: 0 };
     const foundIn = []; // foundIn[w] = true när tonen i ackordfönster w är hittad
     let current = -1; // index för pågående ackordfönster
     let found = false;
     let done = false;
-    // Vänteläge: musiken stannar vid ackordbytet tills tonen är hittad.
+    // Vänteläge: musiken stannar efter första slaget i varje ackord tills tonen är hittad.
     let pausedAt = -1; // musikaliskt steg (efter inräkning) där musiken står still, annars -1
+    let windowHeardAt = 0; // när pågående ackord började höras (för snittid i vänteläge)
 
     env.hud.innerHTML = `
       <div class="hud-main">
@@ -105,15 +106,12 @@ export const ex2 = {
           found = true;
           foundIn[current] = true;
           score.hits++;
+          score.findTime += audio.heardNow - windowHeardAt;
           board.removeMarker('bad');
           board.setMarker('hit', { ...tap, kind: 'good' });
           chips[current % chords.length].classList.add('found');
-          if (pausedAt >= 0) {
-            env.feedback(`Rätt! ${label} är ${TONE[chord.tone].name} i ${chord.name}. Musiken fortsätter …`, 'good');
-            resume();
-          } else {
-            env.feedback(`Rätt! ${label} är ${TONE[chord.tone].name} i ${chord.name}. Spela fritt tills nästa ackord.`, 'good');
-          }
+          env.feedback(`Rätt! ${label} är ${TONE[chord.tone].name} i ${chord.name}. Spela fritt tills nästa ackord.`, 'good');
+          if (pausedAt >= 0) resume();
         } else {
           score.wrong++;
           board.setMarker('bad', { ...tap, kind: 'bad', ttl: 800 });
@@ -137,8 +135,9 @@ export const ex2 = {
           if (m % 2 === 0) audio.click(t, bus);
           return;
         }
-        if (waitMode && m > 0 && m % STEPS_PER_CHORD === 0 && m <= totalSteps
-          && !foundIn[m / STEPS_PER_CHORD - 1]) {
+        // Vänteläge: efter ackordets första slag står musiken still tills tonen är hittad.
+        if (waitMode && m % STEPS_PER_CHORD === 1 && m < totalSteps
+          && !foundIn[(m - 1) / STEPS_PER_CHORD]) {
           pause(m);
           return;
         }
@@ -156,11 +155,13 @@ export const ex2 = {
       const step = m % 8;
       audio.drumStep(step, t, bus);
       const root = 48 + chord.root; // C3–B3
+      // I vänteläget får ackordets första slag klinga ut länge, eftersom musiken stannar efter det.
+      const hold = waitMode && m % STEPS_PER_CHORD === 0;
       if (step === 0) {
-        audio.chord([root, root + (chord.minor ? 3 : 4), root + 7], t, stepDur * 7.6, bus);
+        audio.chord([root, root + (chord.minor ? 3 : 4), root + 7], t, stepDur * (hold ? 16 : 7.6), bus);
       }
       const bassRoot = 36 + chord.root;
-      if (step === 0) audio.bass(bassRoot, t, stepDur * 2.8, bus);
+      if (step === 0) audio.bass(bassRoot, t, stepDur * (hold ? 8 : 2.8), bus);
       if (step === 3) audio.bass(bassRoot, t, stepDur * 0.9, bus);
       if (step === 4) audio.bass(chord.root >= 5 ? bassRoot - 5 : bassRoot + 7, t, stepDur * 2.6, bus);
     };
@@ -169,12 +170,11 @@ export const ex2 = {
       scheduler.stop();
       scheduler = null;
       pausedAt = m;
-      score.stops++;
     }
 
     function resume() {
-      // Kort andningspaus så att rätt ton hinner höras innan nästa ackord.
-      const tStart = audio.now + 0.5;
+      // Musiken fortsätter strax efter rätt ton. Högst ett steg, så att ackordfönstret inte backar.
+      const tStart = audio.now + stepDur;
       offset = tStart - pausedAt * stepDur;
       const m = pausedAt;
       pausedAt = -1;
@@ -186,6 +186,7 @@ export const ex2 = {
       if (current >= 0 && !found) score.missed++;
       current = w;
       found = false;
+      windowHeardAt = audio.heardNow;
       board.clearMarkers();
       const idx = w % chords.length;
       const chord = chords[idx];
@@ -235,7 +236,7 @@ export const ex2 = {
             { label: `Hittade ackordstoner (av ${totalWindows})`, value: score.hits, kind: 'good' },
             { label: 'Feltryck', value: score.wrong, kind: 'bad' },
             waitMode
-              ? { label: 'Gånger musiken fick vänta', value: score.stops, kind: 'near' }
+              ? { label: 'Snittid att hitta tonen', value: `${(score.findTime / Math.max(1, score.hits)).toFixed(1).replace('.', ',')} s`, kind: 'near' }
               : { label: 'Missade ackord', value: score.missed, kind: 'near' },
           ],
         });
