@@ -176,6 +176,16 @@ button.ghost {
 .fb-string.inactive { opacity: 0.22; }
 .fb-num { fill: var(--muted); font-size: 11px; text-anchor: middle; }
 .fb-num.marked { fill: var(--text); font-weight: 700; }
+.fb-num.outside { opacity: 0.35; font-weight: 400; }
+
+/* Översiktshals: visar var på halsen fönstret ligger. */
+.hud-pos { display: flex; align-items: center; gap: 8px; }
+.neck-map { flex: none; display: block; }
+.nm-wood { fill: var(--wood); }
+.nm-fret { stroke: #b9bcc4; stroke-width: 0.6; opacity: 0.6; }
+.nm-dot { fill: #d9cfb8; opacity: 0.6; }
+.nm-nut { fill: #e8e2d0; }
+.nm-win { fill: rgba(255, 159, 67, 0.22); stroke: var(--accent); stroke-width: 1.5; }
 
 .fb-marker { pointer-events: none; }
 .fb-marker circle { stroke: rgba(0, 0, 0, 0.45); stroke-width: 1.5; }

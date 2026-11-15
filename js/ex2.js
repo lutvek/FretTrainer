@@ -1,7 +1,7 @@
 // Övning 2: hitta en given ackordston (ters eller kvint) över en ackordföljd på repeat.
 
 import { audio, Scheduler } from './audio.js';
-import { Fretboard } from './fretboard.js';
+import { Fretboard, neckMap } from './fretboard.js';
 import { KEYS, PROGRESSIONS, buildProgression, midiAt, noteName, pc, pick } from './music.js';
 
 const BPM = 100;
@@ -55,7 +55,7 @@ export const ex2 = {
 
     env.hud.innerHTML = `
       <div class="hud-main">
-        <div class="hud-label">Position: band ${fretStart}–${fretEnd}</div>
+        <div class="hud-label hud-pos">${neckMap(fretStart, fretEnd)}<span>Band ${fretStart}–${fretEnd}</span></div>
         <div class="target-line" id="ex2-target">Gör dig redo …</div>
       </div>
       <div class="chord-strip">
