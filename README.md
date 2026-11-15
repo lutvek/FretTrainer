@@ -18,6 +18,12 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    i positionen. När du hittat tonen spelar du fritt tills nästa ackord.
    Välj Ters, Kvint eller Blandat (slumpas per ackord och ligger fast hela övningen).
 3. **Grundtoner på E, A & D** – som övning 1, men med D-strängen också.
+4. **Hitta alla** – en ton visas, tryck alla platser där den finns på alla sex
+   strängar (band 0–12) innan takterna tar slut. 8 toner i trumkomp, 100 bpm.
+   Med *Oktavhopp* tänds en starton på E- eller A-strängen och resten hittas
+   utifrån den. Välj naturliga toner eller alla 12, och 4, 3 eller 2 takter per
+   ton. Missade platser visas streckade. Poäng: hittade / missade platser, fel
+   och kompletta toner.
 
 ## Installera på iPhone (PWA)
 
@@ -64,7 +70,7 @@ läge, Safari 17+). Hörs ändå inget: kontrollera ringsignalsreglaget och voly
 | `js/music.js` | Tonnamn, lägen på halsen, "närmaste läge", ackordföljder |
 | `js/audio.js` | Ljudmotor (Karplus–Strong-gitarr, trummor, ackord, bas) och taktschemaläggare |
 | `js/fretboard.js` | Greppbrädan som SVG – valfritt bandintervall (t.ex. 0–12, en position eller 0–20) och aktiva strängar |
-| `js/ex1.js`, `js/ex2.js` | Övningarna |
+| `js/ex1.js`, `js/ex2.js`, `js/ex4.js` | Övningarna (`ex1.js` innehåller både övning 1 och 3) |
 | `js/app.js` | Meny, spelvy och resultat |
 
 En ny övning är ett objekt med `id`, `title`, `desc`, `options` och
