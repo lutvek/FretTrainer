@@ -153,5 +153,38 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && running?.handle) quit();
 });
 
+// Ljudvakt: övningarnas klocka och inräkning går på ljudklockan. Om telefonen pausar
+// ljudet (t.ex. när övningen startar efter vrid-skärmen, utan nytt tryck) står klockan
+// still och inräkningen tar aldrig slut. Då visas en knapp – ett tryck startar ljudet.
+let lastAudioTime = -1;
+let stalledTicks = 0;
+setInterval(() => {
+  const active = running?.handle && !screens.play.hidden && audio.ctx;
+  if (!active) {
+    stalledTicks = 0;
+    $('audio-resume').hidden = true;
+    return;
+  }
+  const t = audio.ctx.currentTime;
+  const stuck = audio.ctx.state !== 'running' || t === lastAudioTime;
+  lastAudioTime = t;
+  stalledTicks = stuck ? stalledTicks + 1 : 0;
+  if (stuck) audio.ctx.resume?.().catch(() => {});
+  $('audio-resume').hidden = stalledTicks < 3;
+}, 250);
+
+$('audio-resume').addEventListener('click', () => {
+  audio.init();
+  $('audio-resume').hidden = true;
+  stalledTicks = 0;
+});
+
+// Varje tryck under en övning får också väcka ljudet om det pausats.
+for (const type of ['pointerdown', 'touchend']) {
+  document.addEventListener(type, () => {
+    if (running?.handle && audio.ctx && audio.ctx.state !== 'running') audio.init();
+  }, { capture: true, passive: true });
+}
+
 buildMenu();
 show('menu');
