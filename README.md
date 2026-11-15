@@ -24,6 +24,14 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    utifrån den. Välj naturliga toner eller alla 12, och 4, 3 eller 2 takter per
    ton. Missade platser visas streckade. Poäng: hittade / missade platser, fel
    och kompletta toner.
+5. **Triader på G, B & e** – en slumpad ackordföljd på 8 ackord (dur, moll och
+   dim7) i en position om 5 band på de tre ljusaste strängarna. Följden bygger på
+   funktionsharmonik (t.ex. I–vi–ii–V, dim7 som ledtonsackord som löser upp sig)
+   och kan byta tonart via den nya tonartens V eller vii°7, och sista ackordet
+   leder tillbaka till det första. Inräkningen (två takter) startar när du
+   trycker *Redo*. 4 varv i 90 bpm, en takt per ackord. Spela ackordets alla tre
+   toner (3 av 4 för dim7). Hinner du inte innan takten är slut pausas trummor
+   och komp tills du hittat dem.
 
 ## Installera på iPhone (PWA)
 
@@ -67,10 +75,10 @@ läge, Safari 17+). Hörs ändå inget: kontrollera ringsignalsreglaget och voly
 
 | Fil | Innehåll |
 | --- | --- |
-| `js/music.js` | Tonnamn, lägen på halsen, "närmaste läge", ackordföljder |
+| `js/music.js` | Tonnamn, lägen på halsen, "närmaste läge", ackordföljder (även slumpade med dim och tonartsbyten) |
 | `js/audio.js` | Ljudmotor (Karplus–Strong-gitarr, trummor, ackord, bas) och taktschemaläggare |
 | `js/fretboard.js` | Greppbrädan som SVG – valfritt bandintervall (t.ex. 0–12, en position eller 0–20) och aktiva strängar |
-| `js/ex1.js`, `js/ex2.js`, `js/ex4.js` | Övningarna (`ex1.js` innehåller både övning 1 och 3) |
+| `js/ex1.js`, `js/ex2.js`, `js/ex4.js`, `js/ex5.js` | Övningarna (`ex1.js` innehåller både övning 1 och 3) |
 | `js/app.js` | Meny, spelvy och resultat |
 
 En ny övning är ett objekt med `id`, `title`, `desc`, `options` och
