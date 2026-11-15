@@ -1,14 +1,34 @@
+/* Stil "Pedalbord": svart förstärkargrund, en pedalfärg per övning, lysdioder för takt och träff. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url(../fonts/archivo-variable.woff2) format('woff2-variations'), url(../fonts/archivo-variable.woff2) format('woff2');
+}
+
 :root {
-  --bg: #14161c;
-  --panel: #1e222b;
-  --panel-2: #272c38;
-  --text: #f1f3f7;
-  --muted: #98a0b3;
-  --accent: #ff9f43;
+  --bg: #141414;
+  --panel: #1f1f1f;
+  --panel-2: #2a2a2a;
+  --line: #333;
+  --text: #f2efe8;
+  --muted: #a8a39a;
+  --accent: #e8772e;
+  --led: #ff3b2f;
   --good: #3ddc84;
   --near: #ffc53d;
   --bad: #ff5c5c;
-  --wood: #4a3226;
+  --wood: #2a1d17;
+  --ink: #141414;
+  /* Pedalfärger, en per övning i menyn */
+  --pedal-1: #e8772e;
+  --pedal-2: #2fa39a;
+  --pedal-3: #e9c440;
+  --pedal-4: #d2493e;
+  --pedal-5: #6f8fe0;
+  --condensed: 70%;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -18,7 +38,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Archivo', system-ui, -apple-system, "Segoe UI", sans-serif;
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
@@ -39,49 +59,114 @@ button {
   font: inherit;
   color: inherit;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
 }
 button.primary {
   background: var(--accent);
-  color: #1b1206;
-  font-weight: 700;
-  padding: 13px 22px;
-  font-size: 1.05rem;
+  color: var(--ink);
+  font-weight: 900;
+  font-stretch: 75%;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 13px 24px;
+  font-size: 1.1rem;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2);
 }
-button.primary:active { transform: scale(0.97); }
+button.primary:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2); }
 button.ghost {
-  background: var(--panel-2);
+  background: transparent;
+  border: 1px solid #3a3a3a;
   padding: 10px 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 /* ---- Meny ---- */
-.menu-head h1 { margin: 10px 0 2px; font-size: 1.9rem; letter-spacing: -0.02em; }
-.menu-head p { margin: 0 0 18px; color: var(--muted); }
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0 18px; }
+.menu-head h1 {
+  margin: 0;
+  font-size: 2.6rem;
+  line-height: 1;
+  font-weight: 900;
+  font-stretch: var(--condensed);
+  text-transform: uppercase;
+}
+.menu-head p { margin: 4px 0 0; color: var(--muted); }
+.menu-head::after {
+  content: "";
+  flex: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--led);
+  box-shadow: 0 0 10px var(--led);
+}
+
+/* Varje övning är en pedal i sin egen färg. */
 .card {
+  --pedal: var(--pedal-1);
   display: flex;
   gap: 14px;
-  background: var(--panel);
-  border-radius: 16px;
+  background: var(--pedal);
+  color: var(--ink);
+  border-radius: 10px;
   padding: 16px;
   margin-bottom: 14px;
+  box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.18);
 }
+.card:nth-child(5n + 2) { --pedal: var(--pedal-2); }
+.card:nth-child(5n + 3) { --pedal: var(--pedal-3); }
+.card:nth-child(5n + 4) { --pedal: var(--pedal-4); }
+.card:nth-child(5n + 5) { --pedal: var(--pedal-5); }
 .card-num {
   flex: none;
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   border-radius: 50%;
-  background: var(--panel-2);
-  color: var(--accent);
-  font-weight: 700;
+  background: var(--ink);
+  color: var(--pedal);
+  font-weight: 900;
   display: grid; place-items: center;
 }
 .card-body { flex: 1; min-width: 0; }
-.card h2 { margin: 4px 0 6px; font-size: 1.2rem; }
-.card p { margin: 0 0 14px; color: var(--muted); line-height: 1.4; }
-.option { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; color: var(--muted); }
-.segmented { display: inline-flex; background: var(--panel-2); border-radius: 10px; padding: 3px; }
-.segmented button { background: transparent; padding: 8px 14px; border-radius: 8px; color: var(--muted); }
-.segmented button.on { background: var(--text); color: var(--bg); font-weight: 600; }
+.card h2 {
+  margin: 2px 0 6px;
+  font-size: 1.45rem;
+  line-height: 1.05;
+  font-weight: 900;
+  font-stretch: 75%;
+  text-transform: uppercase;
+}
+.card p { margin: 0 0 14px; color: rgba(20, 20, 20, 0.82); line-height: 1.4; }
+.option { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-weight: 600; }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.segmented button {
+  background: transparent;
+  border: 2px solid var(--ink);
+  padding: 7px 12px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.segmented button.on { background: var(--ink); color: var(--pedal); }
+/* Startknappen: svart med en lysdiod som tänds i pedalens färg. */
+.card .start {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ink);
+  color: var(--text);
+  box-shadow: inset 0 -4px 0 rgba(255, 255, 255, 0.06);
+}
+.card .start::before {
+  content: "";
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--led);
+  box-shadow: 0 0 8px var(--led);
+}
 .tip { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
 
 /* ---- Spelvy ---- */
@@ -93,14 +178,18 @@ button.ghost {
 }
 .topbar { display: flex; align-items: center; gap: 12px; flex: none; }
 .topbar #play-title { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topbar #quit { width: 40px; height: 40px; padding: 0; border-radius: 50%; }
+.topbar #quit { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--panel); }
 #timer {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 1.15rem;
-  background: var(--panel);
-  padding: 6px 12px;
-  border-radius: 10px;
+  font-weight: 800;
+  font-stretch: 80%;
+  letter-spacing: 0.06em;
+  font-size: 1.25rem;
+  background: #000;
+  color: var(--led);
+  text-shadow: 0 0 8px rgba(255, 59, 47, 0.6);
+  padding: 5px 12px;
+  border-radius: 6px;
 }
 
 #hud {
@@ -112,14 +201,14 @@ button.ghost {
   flex-wrap: wrap;
   min-height: 84px;
 }
-.hud-label { color: var(--muted); font-size: 0.85rem; }
-.target-note { font-size: 3.2rem; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.hud-label { color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+.target-note { font-size: 3.4rem; font-weight: 900; font-stretch: var(--condensed); line-height: 1.05; color: var(--accent); }
 .target-row { display: flex; align-items: baseline; gap: 16px; }
 .target-note { min-width: 1.6em; }
 .next-note { color: var(--muted); font-size: 0.9rem; }
 .next-note b { font-size: 1.5rem; font-weight: 700; margin-left: 4px; }
 .target-note.pop, .target-line.pop { animation: pop 0.25s ease-out; }
-@keyframes pop { from { transform: scale(1.25); color: var(--accent); } to { transform: none; } }
+@keyframes pop { from { transform: scale(1.25); color: var(--text); } to { transform: none; } }
 .target-line { font-size: 1.35rem; margin-top: 2px; }
 .target-line b { color: var(--accent); }
 .ready-btn { font-size: 1rem; padding: 6px 22px; margin-top: 2px; }
@@ -129,7 +218,8 @@ button.ghost {
 .hud-side { display: flex; gap: 8px; }
 .pill {
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: 6px;
+  font-weight: 700;
   padding: 6px 10px;
   font-variant-numeric: tabular-nums;
   min-width: 52px;
@@ -140,14 +230,14 @@ button.ghost {
 .pill.bad { color: var(--bad); }
 
 .round-progress { height: 4px; margin-top: 6px; border-radius: 2px; background: var(--panel-2); overflow: hidden; }
-.round-progress i { display: block; height: 100%; width: 0; background: var(--accent); }
+.round-progress i { display: block; height: 100%; width: 0; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
 .chord-strip { display: flex; gap: 6px; flex: 1 1 260px; }
 .chord-chip {
   flex: 1;
   position: relative;
   background: var(--panel);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 8px 6px 12px;
   text-align: center;
   border: 2px solid transparent;
@@ -156,7 +246,7 @@ button.ghost {
 }
 .chord-chip.active { opacity: 1; border-color: var(--accent); }
 .chord-chip.found { border-color: var(--good); }
-.chord-name { font-size: 1.25rem; font-weight: 700; }
+.chord-name { font-size: 1.3rem; font-weight: 900; font-stretch: 75%; }
 .chord-tone { font-size: 0.8rem; color: var(--muted); }
 .chord-tone::before { content: "ton: "; }
 .chord-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--panel-2); }
@@ -197,8 +287,8 @@ button.ghost {
 .fretboard { display: block; touch-action: none; }
 .fb-wood { fill: var(--wood); }
 .fb-nut { fill: #e8e2d0; }
-.fb-fret { stroke: #b9bcc4; stroke-width: 2; }
-.fb-inlay { fill: #d9cfb8; opacity: 0.35; }
+.fb-fret { stroke: #9aa0a8; stroke-width: 2.5; }
+.fb-inlay { fill: #e8e0cf; opacity: 0.45; }
 .fb-string { stroke: #d8d2c0; }
 .fb-string.inactive { opacity: 0.22; }
 .fb-num { fill: var(--muted); font-size: 11px; text-anchor: middle; }
@@ -207,11 +297,11 @@ button.ghost {
 .fb-marker { pointer-events: none; }
 .fb-marker circle { stroke: rgba(0, 0, 0, 0.45); stroke-width: 1.5; }
 .fb-marker text { text-anchor: middle; dominant-baseline: central; font-weight: 700; fill: #10131a; }
-.fb-marker.good circle { fill: var(--good); }
+.fb-marker.good circle { fill: var(--good); filter: drop-shadow(0 0 6px rgba(61, 220, 132, 0.7)); }
 .fb-marker.near circle { fill: var(--near); }
 .fb-marker.bad circle { fill: var(--bad); }
 .fb-marker.neutral circle { fill: #e6e9f0; }
-.fb-marker.start circle { fill: var(--accent); }
+.fb-marker.start circle { fill: var(--accent); filter: drop-shadow(0 0 6px rgba(232, 119, 46, 0.7)); }
 .fb-marker.hint circle { fill: rgba(61, 220, 132, 0.18); stroke: var(--good); stroke-width: 2.5; stroke-dasharray: 5 4; }
 .fb-marker.hint text { fill: var(--good); }
 
@@ -240,7 +330,7 @@ button.ghost {
   padding: 24px;
   border: 0;
   border-radius: 0;
-  background: rgba(20, 22, 28, 0.88);
+  background: rgba(20, 20, 20, 0.9);
   color: inherit;
   font: inherit;
   text-align: center;
@@ -263,7 +353,7 @@ button.ghost {
   text-align: center;
   padding: 24px;
 }
-#rotate h2 { margin: 18px 0 8px; font-size: 1.5rem; }
+#rotate h2 { margin: 18px 0 8px; font-size: 1.9rem; font-weight: 900; font-stretch: var(--condensed); text-transform: uppercase; }
 #rotate p { margin: 0 0 8px; color: var(--muted); line-height: 1.4; max-width: 320px; }
 #rotate .rotate-small { font-size: 0.85rem; margin-bottom: 22px; }
 .rotate-icon { font-size: 3.4rem; animation: rotate-hint 2.4s ease-in-out infinite; }
@@ -275,15 +365,46 @@ button.ghost {
 
 /* ---- Resultat ---- */
 #result { text-align: center; padding-top: 8vh; }
-#result h2 { font-size: 1.6rem; margin: 0 0 6px; }
+#result h2 {
+  font-size: 3.2rem;
+  line-height: 0.95;
+  margin: 0 0 10px;
+  font-weight: 900;
+  font-stretch: 65%;
+  text-transform: uppercase;
+  color: var(--accent);
+}
 #result-note { color: var(--muted); margin: 0 0 22px; min-height: 1em; }
-#result-stats { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
-.stat { background: var(--panel); border-radius: 16px; padding: 16px 12px; flex: 1 1 100px; max-width: 200px; }
-.stat-value { font-size: 2.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.stat-label { color: var(--muted); font-size: 0.9rem; line-height: 1.3; }
-.stat.good .stat-value { color: var(--good); }
-.stat.near .stat-value { color: var(--near); }
-.stat.bad .stat-value { color: var(--bad); }
+#result-stats { display: flex; flex-direction: column; gap: 10px; max-width: 420px; margin: 0 auto 28px; }
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 12px 18px;
+  text-align: left;
+}
+.stat::before {
+  content: "";
+  flex: none;
+  order: -1;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.stat.good::before { background: var(--good); box-shadow: 0 0 10px var(--good); }
+.stat.near::before { background: var(--near); box-shadow: 0 0 10px var(--near); }
+.stat.bad::before { background: var(--bad); box-shadow: 0 0 10px var(--bad); }
+.stat-value {
+  order: 1;
+  font-size: 2.6rem;
+  line-height: 1;
+  font-weight: 900;
+  font-stretch: var(--condensed);
+  font-variant-numeric: tabular-nums;
+}
+.stat-label { flex: 1; color: #c9c4ba; font-size: 1rem; line-height: 1.3; }
 .result-actions { display: flex; gap: 12px; justify-content: center; }
 
 /* Liggande telefon: allt ovanför greppbrädan ryms på en enda rad så att brädan får maximal höjd. */
@@ -307,7 +428,7 @@ button.ghost {
   .hud-main { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
   .round-progress { width: 72px; flex: none; margin: 0; align-self: center; }
   .hud-label { white-space: nowrap; }
-  .target-note { font-size: 1.9rem; line-height: 1; }
+  .target-note { font-size: 2.1rem; line-height: 1; }
   .next-note b { font-size: 1.2rem; }
   .target-line { font-size: 1rem; margin: 0; white-space: nowrap; }
   .pill { padding: 3px 8px; min-width: 46px; }
@@ -323,4 +444,8 @@ button.ghost {
   .ex5-next, .slot-note { display: none; }
   .chord-strip.eight .chord-chip { display: block; border-radius: 8px; }
   #result { padding-top: 12px; }
+  #result h2 { font-size: 2.2rem; }
+  #result-stats { flex-direction: row; max-width: none; }
+  .stat { flex: 1 1 0; padding: 8px 12px; }
+  .stat-value { font-size: 2rem; }
 }
