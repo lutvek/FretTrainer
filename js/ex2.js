@@ -7,7 +7,7 @@ import { KEYS, PROGRESSIONS, buildProgression, midiAt, noteName, pc, pick } from
 const BPM = 100;
 const STEPS_PER_CHORD = 16; // två takter i åttondelar
 const LOOPS = 6; // 6 varv × 4 ackord × 4,8 s ≈ 2 minuter
-const COUNT_IN_STEPS = 8;
+const COUNT_IN_STEPS = 16; // två takters inräkning så att spelaren hinner orientera sig
 const WINDOW_FRETS = 6;
 
 const TONE = {
