@@ -219,6 +219,9 @@ export const ex2 = {
       const waiting = pausedAt >= 0 && elapsed >= pausedAt * stepDur;
       // Medan musiken väntar står klockan still precis före ackordbytet.
       if (pausedAt >= 0) elapsed = Math.min(elapsed, pausedAt * stepDur - 1e-6);
+      // Efter en paus kan den hörda tiden hamna strax före ackordets start (utgångslatens +
+      // ett stegs uppstart). Låt aldrig ackordfönstret backa – då nollställs en hittad ton.
+      if (current >= 0) elapsed = Math.max(elapsed, current * windowDur);
       if (waiting && !targetEl.classList.contains('waiting')) {
         targetEl.classList.add('waiting');
         const chord = chords[current % chords.length];
