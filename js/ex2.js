@@ -7,7 +7,7 @@ import { KEYS, PROGRESSIONS, buildProgression, midiAt, noteName, pc, pick } from
 const BPM = 100;
 const STEPS_PER_CHORD = 16; // två takter i åttondelar
 const LOOPS = 6; // 6 varv × 4 ackord × 4,8 s ≈ 2 minuter
-const COUNT_IN_STEPS = 16; // två takters inräkning så att spelaren hinner orientera sig
+const COUNT_IN_STEPS = 8;
 const WINDOW_FRETS = 6;
 
 const TONE = {
@@ -70,7 +70,7 @@ export const ex2 = {
     env.hud.innerHTML = `
       <div class="hud-main">
         <div class="hud-label">Position: band ${fretStart}–${fretEnd}</div>
-        <div class="target-line" id="ex2-target">Gör dig redo …</div>
+        <div class="target-line" id="ex2-target"><button class="primary ready-btn" id="ex2-ready">Redo</button></div>
       </div>
       <div class="chord-strip">
         ${chords.map((c, i) => `
@@ -124,9 +124,8 @@ export const ex2 = {
 
     // ---- Bakgrundskomp ----
     const bus = audio.createBus(0.6);
-    const t0 = audio.now + 0.12;
-    // Musikalisk tid = audio.heardNow - offset. Varje paus flyttar fram offset.
-    let offset = t0 + COUNT_IN_STEPS * stepDur;
+    // Musikalisk tid = audio.heardNow - offset. Sätts när Redo trycks; varje paus flyttar fram den.
+    let offset = 0;
     let scheduler = null;
 
     // Kör komp från musikaliskt steg baseStep (negativt = inräkning) med start på ljudtiden tStart.
@@ -182,7 +181,6 @@ export const ex2 = {
       runFrom(m, tStart);
     }
 
-    runFrom(-COUNT_IN_STEPS, t0);
 
     const enterWindow = (w) => {
       if (current >= 0 && !found) score.missed++;
@@ -200,8 +198,21 @@ export const ex2 = {
     };
 
     env.setTimer(Math.ceil(totalDur));
-    env.feedback(`Tonart ${noteName(key.root, key.flats)} dur – lyssna in takten.`, '');
-    let raf = requestAnimationFrame(function frame() {
+    env.feedback(`Tonart ${noteName(key.root, key.flats)} dur. Orientera dig på greppbrädan och tryck Redo.`, '');
+
+    // Inräkningen börjar först när spelaren trycker Redo. Fram till dess är det fritt spel.
+    let raf = 0;
+    env.hud.querySelector('#ex2-ready').addEventListener('click', () => {
+      if (done) return;
+      targetEl.textContent = 'Gör dig redo …';
+      env.feedback(`Tonart ${noteName(key.root, key.flats)} dur – lyssna in takten.`, '');
+      const t0 = audio.now + 0.12;
+      offset = t0 + COUNT_IN_STEPS * stepDur;
+      runFrom(-COUNT_IN_STEPS, t0);
+      raf = requestAnimationFrame(frame);
+    });
+
+    function frame() {
       if (done) return;
       let elapsed = audio.heardNow - offset;
       const waiting = pausedAt >= 0 && elapsed >= pausedAt * stepDur;
@@ -238,7 +249,7 @@ export const ex2 = {
         env.setTimer(Math.ceil(totalDur - elapsed));
       }
       raf = requestAnimationFrame(frame);
-    });
+    }
 
     function stop() {
       if (done) return;
