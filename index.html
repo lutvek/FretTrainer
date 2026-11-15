@@ -25,7 +25,7 @@
       <p>Lär dig greppbrädan – korta övningar för mobilen.</p>
     </header>
     <div id="exercise-list"></div>
-    <p class="tip">Tips: slå på ljudet (på iPhone även ringsignalsreglaget) och vrid gärna telefonen till liggande läge.</p>
+    <p class="tip">Tips: slå på ljudet (på iPhone även ringsignalsreglaget) Övningarna körs i liggande läge på telefon.</p>
   </main>
 
   <main id="play" class="screen" hidden>
@@ -37,6 +37,13 @@
     <div id="hud"></div>
     <div id="board"></div>
     <div id="feedback" role="status"></div>
+    <div id="rotate" hidden>
+      <div class="rotate-icon" aria-hidden="true">📱</div>
+      <h2>Vrid telefonen</h2>
+      <p>Övningarna körs i liggande läge och startar så fort skärmen är liggande.</p>
+      <p class="rotate-small">Vrider sig inte skärmen? Stäng av rotationslåset.</p>
+      <button id="rotate-quit" class="ghost">Tillbaka till menyn</button>
+    </div>
   </main>
 
   <main id="result" class="screen" hidden>

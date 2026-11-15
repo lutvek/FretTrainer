@@ -200,6 +200,29 @@ button.ghost {
 #feedback.near { color: var(--near); }
 #feedback.bad { color: var(--bad); }
 
+/* "Vrid telefonen" – visas över spelvyn när en telefon står i stående läge. */
+#rotate {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+#rotate h2 { margin: 18px 0 8px; font-size: 1.5rem; }
+#rotate p { margin: 0 0 8px; color: var(--muted); line-height: 1.4; max-width: 320px; }
+#rotate .rotate-small { font-size: 0.85rem; margin-bottom: 22px; }
+.rotate-icon { font-size: 3.4rem; animation: rotate-hint 2.4s ease-in-out infinite; }
+@keyframes rotate-hint {
+  0%, 25% { transform: rotate(0deg); }
+  50%, 85% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
 /* ---- Resultat ---- */
 #result { text-align: center; padding-top: 8vh; }
 #result h2 { font-size: 1.6rem; margin: 0 0 6px; }
