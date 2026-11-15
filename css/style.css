@@ -122,6 +122,8 @@ button.ghost {
 @keyframes pop { from { transform: scale(1.25); color: var(--accent); } to { transform: none; } }
 .target-line { font-size: 1.35rem; margin-top: 2px; }
 .target-line b { color: var(--accent); }
+.target-line.waiting { animation: wait-pulse 1.2s ease-in-out infinite; }
+@keyframes wait-pulse { 50% { opacity: 0.45; } }
 
 .hud-side { display: flex; gap: 8px; }
 .pill {
