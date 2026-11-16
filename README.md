@@ -26,17 +26,19 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    och kompletta toner.
 5. **Triader på G, B & e – i tonart** – en slumpad ackordföljd på 8 ackord ur en
    durskala (skalans dur- och mollackord och vii°), i en position om 5 band på de
-   tre ljusaste strängarna. Läget väljs efter tonarten: det fönster där flest av
+   tre ljusaste strängarna. Varje ackord i följden går alltid att ta med en ton
+   per sträng inom fönstret. Läget väljs efter tonarten: det fönster där flest av
    följdens ackord har en sluten form och där tonikan finns på G- eller
    B-strängen. Följden bygger på funktionsharmonik (t.ex. I–vi–ii–V), inget
    ackord kommer två gånger i rad och sista ackordet leder tillbaka till det
-   första. Inräkningen (två takter) startar när du trycker *Redo*. 4 varv i
+   första. Inräkningen (två takter) startar när du trycker *Redo* (mitt på
+   greppbrädan). 4 varv i
    90 bpm, en takt per ackord. Spela ackordets alla tre toner. Med *Vänta på
    rätt toner* (standard) stannar musiken efter ackordets första slag tills du
    hittat dem, som i Ackordstoner; utan rullar den på och ackordet räknas som
    missat.
 6. **Triader på G, B & e – slumpat läge** – svårare variant: helt slumpat läge
-   (band 1–10), dim7-ackord (3 av 4 toner räcker, dim7 som ledtonsackord som
+   (band 1–10, bland lägen där alla ackord går att ta en ton per sträng), dim7-ackord (3 av 4 toner räcker, dim7 som ledtonsackord som
    löser upp sig) och tonartsbyten via den nya tonartens V eller vii°7. Varje
    ackord förekommer bara en gång i följden. Samma val för *Vänta på rätt toner*.
 
