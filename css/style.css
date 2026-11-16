@@ -317,6 +317,37 @@ button.ghost {
 #feedback.near { color: var(--near); }
 #feedback.bad { color: var(--bad); }
 
+/* Övning 7: knappsats med tonnamn under greppbrädan */
+#board.with-keypad { display: flex; flex-direction: column; gap: 8px; }
+.keypad-board { flex: 1 1 auto; min-height: 0; }
+.keypad { flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.keypad.chromatic { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.keypad button {
+  background: var(--panel-2);
+  color: var(--text);
+  font-weight: 900;
+  font-stretch: 80%;
+  font-size: 1.25rem;
+  min-height: 46px;
+  padding: 4px 2px;
+  border-radius: 8px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  touch-action: manipulation;
+}
+.keypad.live button { opacity: 1; }
+.keypad button.acc { background: #000; font-size: 0.85rem; line-height: 1.05; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.keypad button:active { transform: translateY(2px); }
+.keypad button.good { background: var(--good); color: var(--ink); opacity: 1; }
+.keypad button.bad { background: var(--bad); color: var(--ink); opacity: 1; }
+.target-note.answer.right { color: var(--good); }
+.target-note.answer.wrong { color: var(--bad); }
+.target-note.answer.late { color: var(--near); }
+@media (max-width: 520px) {
+  .keypad.chromatic { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
 
 /* "Vrid telefonen" – visas över spelvyn när en telefon står i stående läge. */
 #rotate {
@@ -382,6 +413,7 @@ button.ghost {
   font-stretch: var(--condensed);
   font-variant-numeric: tabular-nums;
 }
+.stat-value { white-space: nowrap; }
 .stat-label { flex: 1; color: #c9c4ba; font-size: 1rem; line-height: 1.3; }
 .result-actions { display: flex; gap: 12px; justify-content: center; }
 
@@ -419,6 +451,9 @@ button.ghost {
   .chord-strip.eight .chord-name { font-size: 0.85rem; }
   .slot { padding: 2px 5px; font-size: 0.85rem; }
   .ready-btn { font-size: 0.9rem; padding: 4px 14px; margin-top: 0; }
+  #board.with-keypad { gap: 4px; }
+  .keypad button { min-height: 38px; font-size: 1.1rem; }
+  .keypad button.acc { font-size: 0.75rem; }
   .ex5-next, .slot-note { display: none; }
   .chord-strip.eight .chord-chip { display: block; border-radius: 8px; }
   #result { padding-top: 12px; }

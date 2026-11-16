@@ -40,6 +40,15 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    löser upp sig) och tonartsbyten via den nya tonartens V eller vii°7. Varje
    ackord förekommer bara en gång i följden. Samma val för *Vänta på rätt toner*.
 
+7. **Vilken ton?** – omvänd riktning: en prick tänds på greppbrädan och du väljer
+   tonnamnet på en knappsats under brädan innan tiden tar slut (ett försök per
+   ton). 16 toner i trumkomp, 100 bpm; varje ton spelas när pricken tänds, och
+   nästa kommer på en taktetta. Välj strängar (E & A eller alla sex), band
+   (prickbanden 0, 3, 5, 7, 9, 12 eller alla 0–12), naturliga toner eller alla 12
+   (förtecken med båda namnen) och 2 eller 1 takt per ton. På dator går det att
+   svara med tangenterna C D E F G A B. Poäng: rätt / fel / för sent, mediantid
+   för rätta svar och långsammaste sträng.
+
 ## Installera på iPhone (PWA)
 
 Appen är en PWA: den kan läggas på hemskärmen, startar i helskärm och fungerar

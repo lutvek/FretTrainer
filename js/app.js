@@ -3,8 +3,9 @@ import { ex1, ex3 } from './ex1.js';
 import { ex2 } from './ex2.js';
 import { ex4 } from './ex4.js';
 import { ex5, ex6 } from './ex5.js';
+import { ex7 } from './ex7.js';
 
-const exercises = [ex1, ex2, ex3, ex4, ex5, ex6];
+const exercises = [ex1, ex2, ex3, ex4, ex5, ex6, ex7];
 const $ = (id) => document.getElementById(id);
 const screens = { menu: $('menu'), play: $('play'), result: $('result') };
 
