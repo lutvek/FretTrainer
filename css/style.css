@@ -254,21 +254,7 @@ button.ghost {
 .chord-chip:not(.active) .chord-progress i { width: 0 !important; }
 .chord-chip.found .chord-progress i { background: var(--good); }
 
-/* Övning 5: tonplatser för ackordets toner och en remsa med 8 ackord */
-.tone-slots { display: flex; gap: 5px; align-items: center; }
-.slot {
-  min-width: 2.1em;
-  padding: 4px 6px;
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--muted);
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-.slot.found { background: var(--good); color: #10131a; }
-.slot-note { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
-.tone-slots[hidden] { display: none; }
+/* Övning 5: en remsa med 8 ackord */
 .chord-strip.eight { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; flex: 1 1 100%; }
 .chord-strip.eight .chord-chip { padding: 6px 2px 9px; }
 .chord-strip.eight .chord-name { font-size: 0.95rem; white-space: nowrap; }
@@ -279,12 +265,25 @@ button.ghost {
 }
 
 #board {
+  position: relative;
   flex: 1 1 auto;
   min-height: 204px;
   max-height: 432px;
   touch-action: none;
 }
 .fretboard { display: block; touch-action: none; }
+/* Redo-knapp mitt på greppbrädan (övning 5 och 6) */
+.ready-btn.board-ready {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
+  height: fit-content;
+  font-size: 1.4rem;
+  padding: 12px 40px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
 .fb-wood { fill: var(--wood); }
 .fb-nut { fill: #e8e2d0; }
 .fb-fret { stroke: #9aa0a8; stroke-width: 2.5; }
@@ -449,12 +448,11 @@ button.ghost {
   .chord-strip.eight { flex: 1 1 auto; grid-template-columns: repeat(8, minmax(0, 1fr)); }
   .chord-strip.eight .chord-chip { padding: 2px 2px 5px; }
   .chord-strip.eight .chord-name { font-size: 0.85rem; }
-  .slot { padding: 2px 5px; font-size: 0.85rem; }
   .ready-btn { font-size: 0.9rem; padding: 4px 14px; margin-top: 0; }
   #board.with-keypad { gap: 4px; }
   .keypad button { min-height: 38px; font-size: 1.1rem; }
   .keypad button.acc { font-size: 0.75rem; }
-  .ex5-next, .slot-note { display: none; }
+  .ex5-next { display: none; }
   .chord-strip.eight .chord-chip { display: block; border-radius: 8px; }
   #result { padding-top: 12px; }
   #result h2 { font-size: 2.2rem; }

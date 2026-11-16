@@ -48,31 +48,52 @@ function voice(pcs, prev) {
 /** Bandintervall [start, slut] med start 1–10. */
 const windowAt = (start) => [start, start + WINDOW_FRETS - 1];
 
-/** Finns en sluten form (en ton per sträng, högst 4 band brett) för ackordet i fönstret? */
-function hasCompactShape(chord, start, end) {
-  const want = [...chord.pcs].sort((a, b) => a - b).join(',');
+/**
+ * Greppformer för ackordet i fönstret: en ton per sträng (G, B, e), alla tre olika
+ * ackordtoner (för dim7 räcker 3 av 4). Returnerar formernas bredd i band.
+ */
+function shapeSpans(chord, start, end) {
+  const spans = [];
   for (let g = start; g <= end; g++) {
     for (let b = start; b <= end; b++) {
       for (let e = start; e <= end; e++) {
-        if (Math.max(g, b, e) - Math.min(g, b, e) > 3) continue;
         const got = [midiAt(2, g), midiAt(1, b), midiAt(0, e)].map(pc);
-        if (new Set(got).size === 3 && [...got].sort((x, y) => x - y).join(',') === want) return true;
+        if (new Set(got).size === 3 && got.every((p) => chord.pcs.includes(p))) {
+          spans.push(Math.max(g, b, e) - Math.min(g, b, e));
+        }
       }
     }
   }
-  return false;
+  return spans;
+}
+
+/** Går ackordet att ta med en ton per sträng i fönstret? */
+const hasShape = (chord, start, end) => shapeSpans(chord, start, end).length > 0;
+
+/** Finns en sluten form (högst 4 band brett) för ackordet i fönstret? */
+const hasCompactShape = (chord, start, end) => shapeSpans(chord, start, end).some((w) => w <= 3);
+
+/** Fönsterstarter (1–10) där varje ackord i följden går att ta med en ton per sträng. */
+function playableStarts(chords) {
+  const out = [];
+  for (let start = 1; start <= 10; start++) {
+    const [lo, hi] = windowAt(start);
+    if (chords.every((c) => hasShape(c, lo, hi))) out.push(start);
+  }
+  return out;
 }
 
 /**
- * Läge som passar tonarten: det fönster där flest av följdens ackord har en sluten
- * form, och där tonikan ligger på G- eller B-strängen. Lika bra fönster lottas.
+ * Läge som passar tonarten: bland de spelbara fönstren det där flest av följdens
+ * ackord har en sluten form, och där tonikan ligger på G- eller B-strängen.
+ * Lika bra fönster lottas.
  */
-function positionForKey(chords) {
+function positionForKey(chords, starts) {
   const tonic = chords[0].key;
   const unique = [...new Map(chords.map((c) => [c.name, c])).values()];
   let best = [];
   let bestScore = -1;
-  for (let start = 1; start <= 10; start++) {
+  for (const start of starts) {
     const [lo, hi] = windowAt(start);
     let score = unique.filter((c) => hasCompactShape(c, lo, hi)).length * 2;
     for (let f = lo; f <= hi; f++) {
@@ -81,6 +102,24 @@ function positionForKey(chords) {
     if (score > bestScore) { bestScore = score; best = [start]; } else if (score === bestScore) best.push(start);
   }
   return best[Math.floor(Math.random() * best.length)];
+}
+
+/**
+ * Slumpar följd och läge tills varje ackord går att spela med en ton per sträng
+ * i fönstret. Övning 5 väljer det läge som passar tonarten bäst, övning 6 ett
+ * slumpat bland de spelbara.
+ */
+function progressionAndPosition(inKey) {
+  for (let tries = 0; tries < 200; tries++) {
+    const chords = randomTriadProgression(CHORDS, Math.random, { diatonic: inKey });
+    const starts = playableStarts(chords);
+    if (!starts.length) continue;
+    const fretStart = inKey
+      ? positionForKey(chords, starts)
+      : starts[Math.floor(Math.random() * starts.length)];
+    return { chords, fretStart };
+  }
+  throw new Error('Hittade ingen spelbar triadföljd');
 }
 
 function makeTriadExercise({ id, title, desc, inKey }) {
@@ -102,8 +141,7 @@ function makeTriadExercise({ id, title, desc, inKey }) {
 
     start(env, opts = {}) {
       const waitMode = opts.wait !== 'off';
-      const chords = randomTriadProgression(CHORDS, Math.random, { diatonic: inKey });
-      const fretStart = inKey ? positionForKey(chords) : 1 + Math.floor(Math.random() * 10); // position 1–10
+      const { chords, fretStart } = progressionAndPosition(inKey);
       const fretEnd = fretStart + WINDOW_FRETS - 1;
       const totalBars = LOOPS * CHORDS;
       const stepDur = 60 / BPM / 2;
@@ -130,8 +168,6 @@ function makeTriadExercise({ id, title, desc, inKey }) {
           <div class="hud-label">${inKey ? `${keyName(chords[0].key)} dur · ` : ''}Band ${fretStart}–${fretEnd} · G, B, e · <span id="ex5-loop">Varv 1/${LOOPS}</span></div>
           <div class="target-row">
             <div class="target-note" id="ex5-chord">${chords[0].name}</div>
-            <button class="primary ready-btn" id="ex5-ready">Redo</button>
-            <div class="tone-slots" id="ex5-slots" hidden></div>
             <div class="next-note ex5-next">Nästa <b id="ex5-next">…</b></div>
           </div>
         </div>
@@ -143,19 +179,11 @@ function makeTriadExercise({ id, title, desc, inKey }) {
             </div>`).join('')}
         </div>`;
       const chordEl = env.hud.querySelector('#ex5-chord');
-      const slotsEl = env.hud.querySelector('#ex5-slots');
       const nextEl = env.hud.querySelector('#ex5-next');
       const loopEl = env.hud.querySelector('#ex5-loop');
       const chips = [...env.hud.querySelectorAll('.chord-chip')];
 
       const chordOf = (bar) => chords[bar % CHORDS];
-
-      const renderSlots = (chord) => {
-        slotsEl.innerHTML = chord.pcs.map((p, i) => {
-          const hit = found.has(p);
-          return `<span class="slot${hit ? ' found' : ''}">${hit ? noteName(p, chord.flats) : chord.labels[i]}</span>`;
-        }).join('') + (chord.need < chord.pcs.length ? '<span class="slot-note">3 av 4</span>' : '');
-      };
 
       const board = new Fretboard(env.board, {
         fretStart,
@@ -188,7 +216,6 @@ function makeTriadExercise({ id, title, desc, inKey }) {
           }
           found.set(p, pos);
           board.setMarker(`t${p}`, { ...pos, label, kind: 'good' });
-          renderSlots(chord);
           if (found.size >= chord.need) onComplete();
           else env.feedback(`${label} ✓`, 'good');
         },
@@ -286,11 +313,9 @@ function makeTriadExercise({ id, title, desc, inKey }) {
         chordEl.classList.add('pop');
         nextEl.textContent = bar + 1 < totalBars ? chordOf(bar + 1).name : '–';
         loopEl.textContent = `Varv ${Math.floor(bar / CHORDS) + 1}/${LOOPS}`;
-        renderSlots(chord);
         env.feedback('', '');
       };
 
-      renderSlots(chords[0]);
       nextEl.textContent = chords[1].name;
       env.feedback('Orientera dig på greppbrädan och tryck Redo.', '');
       env.setTimer(0);
@@ -299,11 +324,14 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       // Fram till dess är det fritt spel.
       let startAt = 0;
       let raf = 0;
-      const readyBtn = env.hud.querySelector('#ex5-ready');
+      // Redo-knappen ligger mitt på greppbrädan tills spelaren trycker på den.
+      const readyBtn = document.createElement('button');
+      readyBtn.className = 'primary ready-btn board-ready';
+      readyBtn.textContent = 'Redo';
+      env.board.append(readyBtn);
       readyBtn.addEventListener('click', () => {
         if (done) return;
         readyBtn.remove();
-        slotsEl.hidden = false;
         const t0 = audio.now + LEAD;
         for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
         startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
@@ -361,6 +389,7 @@ function makeTriadExercise({ id, title, desc, inKey }) {
       function stop() {
         if (done) return;
         done = true;
+        readyBtn.remove();
         cancelAnimationFrame(raf);
         audio.fadeOutBus(bus);
         board.destroy();
