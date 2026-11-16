@@ -34,6 +34,21 @@ class AudioEngine {
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
     if (this.ctx.state !== 'running') this.ctx.resume?.().catch(() => {});
+    this.keepAlive();
+  }
+
+  // En tyst slinga som spelas hela tiden. iPhone låser upp ljudet först när något faktiskt
+  // spelas inne i ett tryck, och slutar annars driva ljudklockan när inget hörs.
+  keepAlive() {
+    if (this.silent) return;
+    try {
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      src.loop = true;
+      src.connect(this.ctx.destination);
+      src.start(0);
+      this.silent = src;
+    } catch { /* ok */ }
   }
 
   // ---- Klocka ----
@@ -41,10 +56,10 @@ class AudioEngine {
   // annars på en vanlig klocka – så att övningen fortsätter även när telefonen pausat ljudet.
   // Övergångarna görs kontinuerliga; ljud schemaläggs med ctxTime(t).
 
-  /** Ljudklockan tickar just nu (ljud kan spelas). */
+  /** Ljudet är igång, så det går att spela. (Är det pausat hoppas ljuden över.) */
   get live() {
     this.tick();
-    return this.onCtx;
+    return !!this.ctx && this.ctx.state === 'running';
   }
 
   tick() {
@@ -91,7 +106,9 @@ class AudioEngine {
 
   /** Övningstid → ljudkontextens tid. */
   ctxTime(t) {
-    return Math.max(0, t - this.offset);
+    const c = this.ctx.currentTime;
+    // Följer klockan ljudklockan räknas tiden om direkt, annars relativt "nu".
+    return Math.max(c, this.onCtx ? t - this.offset : c + (t - this.now));
   }
 
   createBus(volume = 1) {
