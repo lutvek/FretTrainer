@@ -6,13 +6,20 @@ class AudioEngine {
     this.pluckCache = new Map();
   }
 
-  /** Måste anropas från en användargest (tryck) – annars får webbläsaren inte spela ljud. */
+  /**
+   * Bör anropas från en användargest (tryck) – annars får webbläsaren inte spela ljud.
+   * Ljud är valfritt: övningarna går på en egen klocka och fungerar helt tyst.
+   */
   init() {
     if (!this.ctx) {
       // Safari 17+: spela som "media" så att ljudet hörs även när ringsignalsreglaget står på tyst.
       try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* stöds inte */ }
-      const AC = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AC({ latencyHint: 'interactive' });
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC({ latencyHint: 'interactive' });
+      } catch {
+        return; // inget ljud alls – övningarna körs tyst
+      }
       const comp = this.ctx.createDynamicsCompressor();
       comp.threshold.value = -14;
       comp.ratio.value = 4;
@@ -26,19 +33,69 @@ class AudioEngine {
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (this.ctx.state !== 'running') this.ctx.resume();
+    if (this.ctx.state !== 'running') this.ctx.resume?.().catch(() => {});
+  }
+
+  // ---- Klocka ----
+  // Övningarnas tid (sekunder). Går på ljudklockan när ljudet är igång (för en stadig takt),
+  // annars på en vanlig klocka – så att övningen fortsätter även när telefonen pausat ljudet.
+  // Övergångarna görs kontinuerliga; ljud schemaläggs med ctxTime(t).
+
+  /** Ljudklockan tickar just nu (ljud kan spelas). */
+  get live() {
+    this.tick();
+    return this.onCtx;
+  }
+
+  tick() {
+    const p = performance.now() / 1000;
+    if (this.clockT === undefined) {
+      this.clockT = 0;
+      this.clockP = p;
+      this.offset = 0;
+      this.onCtx = false;
+    }
+    const ctx = this.ctx;
+    let ticking = false;
+    if (ctx && ctx.state === 'running') {
+      const c = ctx.currentTime;
+      if (c !== this.lastCtx) {
+        this.lastCtx = c;
+        this.ctxSeenAt = p;
+      }
+      ticking = c > 0 && p - this.ctxSeenAt < 0.25;
+    }
+    let t;
+    if (ticking) {
+      // Gå över till ljudklockan utan hopp i tiden.
+      if (!this.onCtx) this.offset = this.clockT + (p - this.clockP) - ctx.currentTime;
+      t = ctx.currentTime + this.offset;
+    } else {
+      t = this.clockT + (p - this.clockP);
+    }
+    this.onCtx = ticking;
+    this.clockT = Math.max(t, this.clockT); // aldrig bakåt
+    this.clockP = p;
+    return this.clockT;
   }
 
   get now() {
-    return this.ctx.currentTime;
+    return this.tick();
   }
 
   /** Tid som motsvarar det som hörs just nu (kompenserar för utgångslatens). */
   get heardNow() {
-    return this.ctx.currentTime - (this.ctx.outputLatency || 0);
+    const t = this.tick();
+    return this.onCtx ? t - (this.ctx.outputLatency || 0) : t;
+  }
+
+  /** Övningstid → ljudkontextens tid. */
+  ctxTime(t) {
+    return Math.max(0, t - this.offset);
   }
 
   createBus(volume = 1) {
+    if (!this.ctx) return null;
     const g = this.ctx.createGain();
     g.gain.value = volume;
     g.connect(this.master);
@@ -46,7 +103,8 @@ class AudioEngine {
   }
 
   fadeOutBus(bus, time = 0.25) {
-    const t = this.now;
+    if (!bus) return;
+    const t = this.ctx.currentTime;
     bus.gain.cancelScheduledValues(t);
     bus.gain.setValueAtTime(bus.gain.value, t);
     bus.gain.linearRampToValueAtTime(0, t + time);
@@ -91,19 +149,20 @@ class AudioEngine {
   }
 
   pluck(midi, when = 0, volume = 0.9, dest = this.master) {
+    if (!this.live) return null;
     const src = this.ctx.createBufferSource();
     src.buffer = this.pluckBuffer(midi);
     const g = this.ctx.createGain();
     g.gain.value = volume;
     src.connect(g).connect(dest);
-    src.start(when || this.now);
+    src.start(when ? this.ctxTime(when) : this.ctx.currentTime);
     return g;
   }
 
   /** Ton från greppbrädan. Vid slide dämpas förra tonen så att det låter som en glidning på strängen. */
   fretNote(midi, { slide, prev }) {
-    if (slide && prev) {
-      const t = this.now;
+    if (slide && prev && this.live) {
+      const t = this.ctx.currentTime;
       prev.gain.setValueAtTime(prev.gain.value, t);
       prev.gain.linearRampToValueAtTime(0, t + 0.07);
     }
@@ -113,6 +172,8 @@ class AudioEngine {
   // ---- Trummor ----
 
   kick(t, dest) {
+    if (!this.live || !dest) return;
+    t = this.ctxTime(t);
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     o.frequency.setValueAtTime(140, t);
@@ -125,6 +186,8 @@ class AudioEngine {
   }
 
   noiseHit(t, dest, { type, freq, dur, vol }) {
+    if (!this.live || !dest) return;
+    t = this.ctxTime(t);
     const src = this.ctx.createBufferSource();
     src.buffer = this.noise;
     const f = this.ctx.createBiquadFilter();
@@ -138,8 +201,10 @@ class AudioEngine {
     src.stop(t + dur + 0.02);
   }
 
-  snare(t, dest) {
-    this.noiseHit(t, dest, { type: 'bandpass', freq: 1900, dur: 0.16, vol: 0.55 });
+  snare(time, dest) {
+    if (!this.live || !dest) return;
+    this.noiseHit(time, dest, { type: 'bandpass', freq: 1900, dur: 0.16, vol: 0.55 });
+    const t = this.ctxTime(time);
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     o.type = 'triangle';
@@ -170,6 +235,8 @@ class AudioEngine {
   // ---- Ackord & bas ----
 
   tone(midi, t, dur, dest, { type = 'triangle', vol = 0.12, attack = 0.02, cutoff = 1800 } = {}) {
+    if (!this.live || !dest) return;
+    t = this.ctxTime(t);
     const o = this.ctx.createOscillator();
     o.type = type;
     o.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
