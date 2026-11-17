@@ -34,7 +34,7 @@ export const ex7 = {
       default: 'low',
       choices: [
         { value: 'low', label: 'E & A' },
-        { value: 'low3', label: 'E, A & D' },
+        { value: 'high3', label: 'G, H & e' },
         { value: 'all', label: 'Alla sex' },
       ],
     },
@@ -68,7 +68,7 @@ export const ex7 = {
   ],
 
   start(env, opts) {
-    const strings = { all: [0, 1, 2, 3, 4, 5], low3: [3, 4, 5] }[opts.strings] || [4, 5];
+    const strings = { all: [0, 1, 2, 3, 4, 5], high3: [0, 1, 2] }[opts.strings] || [4, 5];
     const frets = opts.frets === 'marks' ? LANDMARKS : [...Array(FRET_END - FRET_START + 1).keys()];
     const pool = opts.notes === 'all' ? [...Array(12).keys()] : NATURALS;
     const BARS = Number(opts.bars) || 2;
@@ -277,7 +277,7 @@ export const ex7 = {
       }
       // Långsammaste strängen (median), bara om flera strängar har minst två rätta svar.
       const per = [...byString.entries()].filter(([, ts]) => ts.length >= 2).map(([s, ts]) => [s, median(ts)]);
-      let note = `${ROUNDS} toner · ${{ 2: 'E & A', 3: 'E, A & D' }[strings.length] || 'alla strängar'} · ${opts.frets === 'marks' ? 'prickbanden' : 'band 0–12'} · ${pool.length > 7 ? 'alla 12 toner' : 'naturliga toner'} · ${BARS} ${BARS === 1 ? 'takt' : 'takter'} per ton`;
+      let note = `${ROUNDS} toner · ${{ 2: 'E & A', 3: 'G, H & e' }[strings.length] || 'alla strängar'} · ${opts.frets === 'marks' ? 'prickbanden' : 'band 0–12'} · ${pool.length > 7 ? 'alla 12 toner' : 'naturliga toner'} · ${BARS} ${BARS === 1 ? 'takt' : 'takter'} per ton`;
       if (per.length >= 2) {
         per.sort((a, b) => b[1] - a[1]);
         note += ` · långsammast: ${STRING_NAMES[per[0][0]]}-strängen (${fmtSec(per[0][1])})`;
