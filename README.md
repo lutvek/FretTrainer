@@ -50,6 +50,8 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    (förtecken med båda namnen) och 2 eller 1 takt per ton. På dator går det att
    svara med tangenterna C D E F G A B. Poäng: rätt / fel / för sent, mediantid
    för rätta svar och långsammaste sträng.
+8. **Grundtoner på G, B & e** – som övning 1, men på de tre ljusa strängarna
+   (G, B och e, band 0–12).
 
 ## Installera på iPhone (PWA)
 

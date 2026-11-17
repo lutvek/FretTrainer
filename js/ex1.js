@@ -190,3 +190,10 @@ export const ex3 = rootsExercise({
   desc: 'Som övning 1, men med D-strängen också: hitta tonen på E-, A- eller D-strängen, så nära din förra ton som möjligt.',
   strings: [5, 4, 3],
 });
+
+export const ex8 = rootsExercise({
+  id: 'roots-gbe',
+  title: 'Grundtoner på G, B & e',
+  desc: 'Som övning 1, men på de tre ljusa strängarna: hitta tonen på G-, B- eller e-strängen, så nära din förra ton som möjligt.',
+  strings: [2, 1, 0],
+});
