@@ -205,6 +205,7 @@ button.ghost {
 .target-note { font-size: 3.4rem; font-weight: 900; font-stretch: var(--condensed); line-height: 1.05; color: var(--accent); }
 .target-row { display: flex; align-items: baseline; gap: 16px; }
 .target-note { min-width: 1.6em; }
+.target-note.interval { min-width: 2.4em; } /* ♭2↓ … 8↑: fast bredd så att resten inte flyttar sig */
 .next-note { color: var(--muted); font-size: 0.9rem; }
 .next-note b { font-size: 1.5rem; font-weight: 700; margin-left: 4px; }
 .target-note.pop, .target-line.pop { animation: pop 0.25s ease-out; }
@@ -454,6 +455,10 @@ button.ghost {
   .hud-main { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
   .round-progress { width: 72px; flex: none; margin: 0; align-self: center; }
   .hud-label { white-space: nowrap; }
+  /* Liggande: HUD:en hålls på en rad så att greppbrädan inte byter storlek när texten ändras. */
+  #hud .hud-main { flex: 1 1 auto; }
+  #hud .hud-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  #hud .target-row, #hud .next-note, #hud .hud-side { flex: none; white-space: nowrap; }
   .target-note { font-size: 2.1rem; line-height: 1; }
   .next-note b { font-size: 1.2rem; }
   .target-line { font-size: 1rem; margin: 0; white-space: nowrap; }

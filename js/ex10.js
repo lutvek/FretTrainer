@@ -122,7 +122,7 @@ export const ex10 = {
       <div class="hud-main">
         <div class="hud-label">Intervall · <span id="ex10-round">–</span> · <span id="ex10-name">…</span></div>
         <div class="target-row">
-          <div class="target-note" id="ex10-target">…</div>
+          <div class="target-note interval" id="ex10-target">…</div>
           <div class="next-note">från <b id="ex10-root">…</b></div>
         </div>
         <div class="round-progress"><i id="ex10-progress"></i></div>
@@ -214,7 +214,7 @@ export const ex10 = {
           board.removeMarker('bad');
           board.setMarker('target', { ...tap, label: q.targetName, kind: 'good' });
           audio.pluck(q.rootMidi, 0, 0.6); // starton + mål klingar ihop
-          $('target').className = 'target-note answer right';
+          $('target').className = 'target-note interval answer right';
           env.feedback(`Rätt – ${q.iv.name} ${dirWord(q.dir)} från ${q.rootName} är ${q.targetName} (${fmtSec(t)}).`, 'good');
           endRound(elapsed);
           return;
@@ -248,7 +248,7 @@ export const ex10 = {
       accepting = true;
       const targetEl = $('target');
       targetEl.textContent = ivLabel(q.iv, q.dir);
-      targetEl.className = 'target-note';
+      targetEl.className = 'target-note interval';
       void targetEl.offsetWidth;
       targetEl.classList.add('pop');
       $('root').textContent = q.rootName;
@@ -304,7 +304,7 @@ export const ex10 = {
         if (accepting && elapsed >= roundEnd) {
           score.late++;
           if (!tried) missed.set(q.iv, (missed.get(q.iv) || 0) + 1);
-          $('target').className = 'target-note answer late';
+          $('target').className = 'target-note interval answer late';
           env.feedback(`För sent – ${q.iv.name} ${dirWord(q.dir)} från ${q.rootName} är ${q.targetName} (streckad).`, 'near');
           endRound(elapsed, true);
         }
