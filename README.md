@@ -52,14 +52,24 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    för rätta svar och långsammaste sträng.
 8. **Grundtoner på G, B & e** – som övning 1, men på de tre ljusa strängarna
    (G, B och e, band 0–12).
-9. **Intervall** – en starton (orange) tänds på greppbrädan och ett intervall
-   visas, t.ex. ♭3↑ (liten ters upp). Hitta tonen i rätt oktav, på valfri sträng,
-   innan tiden tar slut; måltonen går alltid att nå inom fyra band från startonen.
-   Fel tryck förklaras (t.ex. "rätt ton men fel oktav" eller vilket intervall du
-   tog), och missade intervall visas streckade. 16 intervall i trumkomp, 100 bpm.
-   Välj Vanliga (terser, kvart, kvint, oktav) eller alla 12, Uppåt eller Upp & ned,
-   och 2 eller 1 takt per intervall. Tonerna stavas efter intervallet (liten ters
-   från C är E♭). Poäng: rätt / fel / för sent, mediantid och svåraste intervall.
+9. **Arpeggios i tonart** – samma upplägg som övning 5 (8 ackord ur en durskala,
+   en takt per ackord i 90 bpm, *Redo*, inräkning och *Vänta på rätt toner*),
+   men 2 varv och i en position om 5 band på alla sex strängar, där tonikan finns
+   på E- eller A-strängen. Spela ackordet som arpeggio, en ton i taget:
+   grundton, ters, kvint och grundtonen en oktav upp. Varje ton ska vara
+   närmaste ackordston ovanför den förra, och grundtonen måste väljas så att
+   arpeggiot får plats i läget. Välj *Uppåt* (1–3–5–1), *Nedåt* (1–5–3–1) eller
+   *Växla* (upp och ner varannat ackord). Stegen visas i HUD:en och fylls i med
+   tonnamn när de spelas. Poäng: klara arpeggios, feltryck och snittid (eller
+   missade ackord).
+10. **Intervall** – en starton (orange) tänds på greppbrädan och ett intervall
+    visas, t.ex. ♭3↑ (liten ters upp). Hitta tonen i rätt oktav, på valfri sträng,
+    innan tiden tar slut; måltonen går alltid att nå inom fyra band från startonen.
+    Fel tryck förklaras (t.ex. "rätt ton men fel oktav" eller vilket intervall du
+    tog), och missade intervall visas streckade. 16 intervall i trumkomp, 100 bpm.
+    Välj Vanliga (terser, kvart, kvint, oktav) eller alla 12, Uppåt eller Upp & ned,
+    och 2 eller 1 takt per intervall. Tonerna stavas efter intervallet (liten ters
+    från C är E♭). Poäng: rätt / fel / för sent, mediantid och svåraste intervall.
 
 ## Installera på iPhone (PWA)
 
@@ -106,7 +116,7 @@ läge, Safari 17+). Hörs ändå inget: kontrollera ringsignalsreglaget och voly
 | `js/music.js` | Tonnamn, lägen på halsen, "närmaste läge", ackordföljder (även slumpade med dim och tonartsbyten) |
 | `js/audio.js` | Ljudmotor (Karplus–Strong-gitarr, trummor, ackord, bas) och taktschemaläggare |
 | `js/fretboard.js` | Greppbrädan som SVG – valfritt bandintervall (t.ex. 0–12, en position eller 0–20) och aktiva strängar |
-| `js/ex1.js`, `js/ex2.js`, `js/ex4.js`, `js/ex5.js`, `js/ex7.js`, `js/ex9.js` | Övningarna (`ex1.js` innehåller övning 1, 3 och 8) |
+| `js/ex1.js`, `js/ex2.js`, `js/ex4.js`, `js/ex5.js`, `js/ex7.js`, `js/ex9.js`, `js/ex10.js` | Övningarna (`ex1.js` innehåller övning 1, 3 och 8) |
 | `js/app.js` | Meny, spelvy och resultat |
 
 En ny övning är ett objekt med `id`, `title`, `desc`, `options` och

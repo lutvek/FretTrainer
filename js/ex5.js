@@ -21,10 +21,10 @@ const STRINGS = [0, 1, 2]; // e, B, G
 const LEAD = 0.12; // marginal (s) när något schemaläggs "nu"
 
 /** Bas i A1–G♯2. */
-const bassNote = (p) => 33 + ((p + 3) % 12);
+export const bassNote = (p) => 33 + ((p + 3) % 12);
 
 /** Komp-voicing (sluten, G3–D5) som rör sig så lite som möjligt från förra ackordet. */
-function voice(pcs, prev) {
+export function voice(pcs, prev) {
   let best = null;
   for (let inv = 0; inv < pcs.length; inv++) {
     const order = [...pcs.slice(inv), ...pcs.slice(0, inv)];

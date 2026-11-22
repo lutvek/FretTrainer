@@ -1,347 +1,348 @@
-// Övning 9: Intervall – en starton tänds på greppbrädan, hitta tonen ett visst intervall upp
-// (eller ned) från den, innan tiden tar slut. Exakt tonhöjd räknas: rätt ton i fel oktav är fel.
+// Övning 9: arpeggios över en ackordföljd i en durtonart, i en position om 5 band
+// på alla sex strängar. Spelaren spelar ackordets toner en i taget i ordning,
+// 1–3–5–1 uppåt (eller 1–5–3–1 nedåt), där varje ton ska vara närmaste ackordston
+// ovanför (nedanför) den förra. Samma upplägg som triadövningarna: 8 ackord, en
+// takt per ackord i 90 bpm, Redo-knapp, inräkning och "Vänta på rätt toner".
 
-import { audio, Scheduler } from './audio.js';
+import { audio } from './audio.js';
 import { Fretboard } from './fretboard.js';
-import { midiAt, pc } from './music.js';
+import { bassNote, voice } from './ex5.js';
+import { keyName, midiAt, noteName, pc, randomTriadProgression } from './music.js';
 
-const FRET_START = 0;
-const FRET_END = 12;
+const BPM = 90;
+const STEPS_PER_BAR = 8; // åttondelar i en 4/4-takt
+const LOOPS = 2;
+const COUNT_IN_BEATS = 8; // två takters inräkning
+const CHORDS = 8;
+const WINDOW_FRETS = 5;
 const STRINGS = [0, 1, 2, 3, 4, 5];
-const BPM = 100;
-const STEPS_PER_BAR = 8; // åttondelar
-const COUNT_IN_STEPS = 8;
-const ROUNDS = 16;
-const REACH = 4; // målet ska gå att nå inom så här många band från startonen
+const LEAD = 0.12; // marginal (s) när något schemaläggs "nu"
 
-// semis: halvtoner, deg: tonsteg (1 = prim) – används för att stava måltonen rätt.
-const INTERVALS = [
-  { semis: 1, deg: 2, short: '♭2', name: 'liten sekund' },
-  { semis: 2, deg: 2, short: '2', name: 'stor sekund' },
-  { semis: 3, deg: 3, short: '♭3', name: 'liten ters' },
-  { semis: 4, deg: 3, short: '3', name: 'stor ters' },
-  { semis: 5, deg: 4, short: '4', name: 'ren kvart' },
-  { semis: 6, deg: 5, alt: 4, short: '♭5', name: 'tritonus' }, // stavas som ♭5 eller ♯4
-  { semis: 7, deg: 5, short: '5', name: 'ren kvint' },
-  { semis: 8, deg: 6, short: '♭6', name: 'liten sext' },
-  { semis: 9, deg: 6, short: '6', name: 'stor sext' },
-  { semis: 10, deg: 7, short: '♭7', name: 'liten septima' },
-  { semis: 11, deg: 7, short: '7', name: 'stor septima' },
-  { semis: 12, deg: 8, short: '8', name: 'oktav' },
-];
-const BASIC = new Set([3, 4, 5, 7, 12]); // terser, kvart, kvint, oktav
-const bySemis = new Map(INTERVALS.map((iv) => [iv.semis, iv]));
+// Ackordtonernas ordning (index i chord.pcs): grundton, ters, kvint, grundton en oktav bort.
+const ORDER = { up: [0, 1, 2, 0], down: [0, 2, 1, 0] };
 
-// Stavning: bokstav + förtecken, så att t.ex. liten ters från C blir E♭ och inte D♯.
-const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
-const ACC = { '-2': '𝄫', '-1': '♭', 0: '', 1: '♯', 2: '𝄪' };
-const ODD = new Set(['E♯', 'B♯', 'F♭', 'C♭']);
-const wrap = (d) => ((((d + 6) % 12) + 12) % 12) - 6; // -6..5
-const spell = (letter, p) => {
-  const acc = wrap(p - LETTER_PC[letter]);
-  return Math.abs(acc) > 2 ? null : { letter, acc, text: LETTERS[letter] + ACC[acc] };
-};
-// Stavningar för en tonklass utan dubbelförtecken (naturliga toner bara en).
-const spellings = (p) => [0, 1, 2, 3, 4, 5, 6]
-  .map((l) => spell(l, p))
-  .filter((s) => s && Math.abs(s.acc) <= 1)
-  .sort((a, b) => Math.abs(a.acc) - Math.abs(b.acc))
-  .filter((s, i, all) => Math.abs(s.acc) === Math.abs(all[0].acc));
-
-const fmtSec = (s) => `${s.toFixed(1).replace('.', ',')} s`;
-const median = (xs) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = s.length >> 1;
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-};
-const posKey = (p) => `${p.string}-${p.fret}`;
-
-/** Alla lägen inom band 0–12 där exakt den här tonhöjden finns. */
-const placesOf = (midi) => STRINGS.flatMap((string) => {
-  const fret = midi - midiAt(string, 0);
-  return fret >= FRET_START && fret <= FRET_END ? [{ string, fret }] : [];
-});
+/** Fönsterstart (1–8) där tonikan finns på E- eller A-strängen. Lika bra lägen lottas. */
+function positionForKey(key) {
+  const starts = [];
+  for (let start = 1; start <= 8; start++) {
+    for (let f = start; f < start + WINDOW_FRETS; f++) {
+      if (pc(midiAt(5, f)) === key || pc(midiAt(4, f)) === key) { starts.push(start); break; }
+    }
+  }
+  return starts[Math.floor(Math.random() * starts.length)];
+}
 
 export const ex9 = {
-  id: 'intervals',
-  title: 'Intervall',
-  desc: 'En starton tänds på greppbrädan – hitta tonen ett visst intervall från den, i rätt oktav, innan tiden tar slut. 16 intervall i trumkomp. Vanliga = terser, kvart, kvint och oktav.',
+  id: 'arpeggios',
+  title: 'Arpeggios i tonart',
+  desc: 'En ackordföljd på 8 ackord ur en durskala går 2 varv i 90 bpm, en takt per ackord, i en position om 5 band. Spela ackordet som arpeggio, en ton i taget: grundton, ters, kvint och grundtonen en oktav upp (eller nedåt: 1–5–3–1). Varje ton ska vara närmaste ackordston från den förra. Med Vänta på rätt toner stannar musiken efter ackordets första slag tills arpeggiot är klart. Inräkningen startar när du trycker Redo.',
   options: [
-    {
-      key: 'set',
-      label: 'Intervall',
-      default: 'basic',
-      choices: [
-        { value: 'basic', label: 'Vanliga' },
-        { value: 'all', label: 'Alla 12' },
-      ],
-    },
     {
       key: 'dir',
       label: 'Riktning',
       default: 'up',
       choices: [
         { value: 'up', label: 'Uppåt' },
-        { value: 'both', label: 'Upp & ned' },
+        { value: 'down', label: 'Nedåt' },
+        { value: 'mixed', label: 'Växla' },
       ],
     },
     {
-      key: 'bars',
-      label: 'Tid per intervall',
-      default: '2',
+      key: 'wait',
+      label: 'Vänta på rätt toner',
+      default: 'on',
       choices: [
-        { value: '2', label: '2 takter' },
-        { value: '1', label: '1 takt' },
+        { value: 'off', label: 'Nej' },
+        { value: 'on', label: 'Ja' },
       ],
     },
   ],
 
-  start(env, opts) {
-    const pool = opts.set === 'all' ? INTERVALS : INTERVALS.filter((iv) => BASIC.has(iv.semis));
-    const dirs = opts.dir === 'both' ? [1, -1] : [1];
-    const BARS = Number(opts.bars) || 2;
+  start(env, opts = {}) {
+    const waitMode = opts.wait !== 'off';
+    const chords = randomTriadProgression(CHORDS, Math.random, { diatonic: true });
+    const fretStart = positionForKey(chords[0].key);
+    const fretEnd = fretStart + WINDOW_FRETS - 1;
+    const lowest = midiAt(5, fretStart);
+    const highest = midiAt(0, fretEnd);
+    const totalBars = LOOPS * CHORDS;
     const stepDur = 60 / BPM / 2;
     const barDur = STEPS_PER_BAR * stepDur;
+    // Riktning per takt: fast, eller växlande upp/ner ackord för ackord.
+    const dirOf = (bar) => (opts.dir === 'mixed' ? (bar % 2 ? 'down' : 'up') : opts.dir === 'down' ? 'down' : 'up');
 
-    const score = { right: 0, wrong: 0, late: 0 };
-    const times = []; // svarstider för rätta svar
-    const byInterval = new Map(); // intervall → svarstider (rätta svar)
-    const missed = new Map(); // intervall → antal fel/för sent
-    let round = 0;
-    let q = null; // { root, rootMidi, iv, dir, targetMidi, rootName, targetName, flats, places }
-    let tried = false; // har ett fel gjorts i aktuellt intervall?
-    let accepting = false;
-    let roundStart = 0;
-    let roundEnd = 0;
-    let nextStart = 0;
-    let finishAt = null;
+    let v = null;
+    for (let pass = 0; pass < 2; pass++) chords.forEach((c) => { v = c.voicing = voice(c.pcs, v); });
+
+    const score = { hits: 0, missed: 0, wrong: 0, findTime: 0 };
+    const bars = [];
+    let cur = -1;
+    let step = 0; // antal spelade toner i arpeggiot
+    let last = null; // midi för förra tonen
+    let complete = false;
+    let waitingNow = false;
+    let barHeardAt = 0;
     let done = false;
+    let endAt = null;
 
     env.hud.innerHTML = `
       <div class="hud-main">
-        <div class="hud-label">Intervall · <span id="ex9-round">–</span> · <span id="ex9-name">…</span></div>
+        <div class="hud-label">${keyName(chords[0].key)} dur · Band ${fretStart}–${fretEnd} · <span id="ex9-loop">Varv 1/${LOOPS}</span></div>
         <div class="target-row">
-          <div class="target-note" id="ex9-target">…</div>
-          <div class="next-note">från <b id="ex9-root">…</b></div>
+          <div class="target-note" id="ex9-chord">${chords[0].name}</div>
+          <div class="arp-steps" id="ex9-steps"></div>
         </div>
-        <div class="round-progress"><i id="ex9-progress"></i></div>
       </div>
-      <div class="hud-side">
-        <div class="pill good" title="Rätt">✓ <b id="ex9-right">0</b></div>
-        <div class="pill bad" title="Fel">✗ <b id="ex9-wrong">0</b></div>
-        <div class="pill near" title="För sent">⏱ <b id="ex9-late">0</b></div>
+      <div class="chord-strip eight">
+        ${chords.map((c, i) => `
+          <div class="chord-chip" data-i="${i}">
+            <div class="chord-name">${c.name}</div>
+            <div class="chord-progress"><i></i></div>
+          </div>`).join('')}
       </div>`;
-    const $ = (id) => env.hud.querySelector(`#ex9-${id}`);
-    const updateScore = () => {
-      for (const k of Object.keys(score)) $(k).textContent = score[k];
-    };
-    const dirWord = (d) => (d > 0 ? 'upp' : 'ned');
-    const ivLabel = (iv, d) => `${iv.short}${d > 0 ? '↑' : '↓'}`;
-    // Namn på en tryckt ton: stavas med ♭ eller ♯ efter aktuell fråga.
-    const noteText = (p) => {
-      const s = spellings(p);
-      return (s.find((x) => (q.flats ? x.acc <= 0 : x.acc >= 0)) || s[0]).text;
+    const chordEl = env.hud.querySelector('#ex9-chord');
+    const stepsEl = env.hud.querySelector('#ex9-steps');
+    const loopEl = env.hud.querySelector('#ex9-loop');
+    const chips = [...env.hud.querySelectorAll('.chord-chip')];
+
+    const chordOf = (bar) => chords[((bar % CHORDS) + CHORDS) % CHORDS];
+    const orderOf = (bar) => ORDER[dirOf(bar)];
+    const expectedPc = () => chordOf(cur).pcs[orderOf(cur)[step]];
+
+    /** Visar arpeggiots steg: gradtal för de som är kvar, tonnamn för de som är spelade. */
+    const renderSteps = (bar) => {
+      const chord = chordOf(bar);
+      const order = orderOf(bar);
+      const arrow = dirOf(bar) === 'up' ? '↑' : '↓';
+      stepsEl.innerHTML = `<span class="arp-dir">${arrow}</span>${order.map((idx, i) => {
+        const cls = i < step && bar === cur ? 'done' : i === step && bar === cur && !complete ? 'now' : '';
+        const text = cls === 'done' ? noteName(chord.pcs[idx], chord.flats) : chord.labels[idx];
+        return `<span class="arp-step ${cls}">${text}</span>`;
+      }).join('')}`;
     };
 
-    // Slumpa starton + intervall så att målet finns inom räckhåll (REACH band) och
-    // båda tonerna går att stava utan dubbelförtecken.
-    let prevRoot = null;
-    let prevIv = null;
-    const pickQuestion = () => {
-      for (let tries = 0; tries < 500; tries++) {
-        const iv = pool[Math.floor(Math.random() * pool.length)];
-        if (pool.length > 1 && iv === prevIv && tries < 400) continue;
-        const dir = dirs[Math.floor(Math.random() * dirs.length)];
-        const root = { string: STRINGS[Math.floor(Math.random() * 6)], fret: Math.floor(Math.random() * (FRET_END + 1)) };
-        const rootMidi = midiAt(root.string, root.fret);
-        if (prevRoot !== null && pc(rootMidi) === prevRoot && tries < 400) continue;
-        const targetMidi = rootMidi + dir * iv.semis;
-        const places = placesOf(targetMidi).filter((p) => posKey(p) !== posKey(root));
-        if (!places.some((p) => Math.abs(p.fret - root.fret) <= REACH)) continue;
-        const rs = spellings(pc(rootMidi));
-        const rootSp = rs[Math.floor(Math.random() * rs.length)];
-        // Enklaste stavningen av målet; udda namn som E♯ och C♭ undviks.
-        const targetSp = [iv.deg, iv.alt].filter(Boolean)
-          .map((deg) => spell((((rootSp.letter + dir * (deg - 1)) % 7) + 7) % 7, pc(targetMidi)))
-          .filter((sp) => sp && Math.abs(sp.acc) <= 1 && !ODD.has(sp.text))
-          .sort((a, b) => Math.abs(a.acc) - Math.abs(b.acc))[0];
-        if (!targetSp) continue;
-        prevRoot = pc(rootMidi);
-        prevIv = iv;
-        return {
-          root, rootMidi, iv, dir, targetMidi, places,
-          rootName: rootSp.text,
-          targetName: targetSp.text,
-          flats: rootSp.acc < 0 || targetSp.acc < 0,
-        };
-      }
-      // Reserv (bör aldrig behövas): stor ters upp från C på A-strängen.
-      const root = { string: 4, fret: 3 };
-      return {
-        root, rootMidi: 48, iv: bySemis.get(4), dir: 1, targetMidi: 52, places: placesOf(52),
-        rootName: 'C', targetName: 'E', flats: false,
-      };
+    /** Går det att spela hela arpeggiot från grundtonen `m` inom fönstret? */
+    const fits = (m) => (dirOf(cur) === 'up' ? m + 12 <= highest : m - 12 >= lowest);
+
+    /** Är tonen nästa rätta ton i arpeggiot? */
+    const isNext = (m) => {
+      if (pc(m) !== expectedPc()) return false;
+      if (step === 0) return fits(m);
+      const d = dirOf(cur) === 'up' ? m - last : last - m;
+      return d > 0 && d <= 12;
     };
 
     const board = new Fretboard(env.board, {
-      fretStart: FRET_START,
-      fretEnd: FRET_END,
+      fretStart,
+      fretEnd,
       activeStrings: STRINGS,
-      canJudge: () => !done && accepting,
-      isHit: (pos) => midiAt(pos.string, pos.fret) === q.targetMidi,
+      canJudge: () => !done && cur >= 0 && !complete,
+      isHit: (pos) => isNext(midiAt(pos.string, pos.fret)),
       play(pos, how) {
         if (done) return null;
         const midi = midiAt(pos.string, pos.fret);
-        if (q && posKey(pos) !== posKey(q.root)) {
-          board.setMarker('free', { ...pos, label: noteText(pc(midi)), kind: 'neutral', ttl: 400 });
-        }
+        const flats = chordOf(Math.max(cur, 0)).flats;
+        board.setMarker('free', { ...pos, label: noteName(midi, flats), kind: 'neutral', ttl: 500 });
         return audio.fretNote(midi, how);
       },
-      judge(tap) {
-        if (posKey(tap) === posKey(q.root)) return; // startonen själv räknas inte
-        const midi = midiAt(tap.string, tap.fret);
+      judge(pos) {
+        const chord = chordOf(cur);
+        const m = midiAt(pos.string, pos.fret);
+        const label = noteName(m, chord.flats);
         board.removeMarker('free');
-        const elapsed = audio.heardNow - startAt;
-        if (midi === q.targetMidi) {
-          const t = Math.max(0, elapsed - roundStart);
-          score.right++;
-          if (!tried) {
-            times.push(t);
-            if (!byInterval.has(q.iv)) byInterval.set(q.iv, []);
-            byInterval.get(q.iv).push(t);
-          }
+        if (m === last) return; // samma ton igen – ingen bedömning
+        if (isNext(m)) {
           board.removeMarker('bad');
-          board.setMarker('target', { ...tap, label: q.targetName, kind: 'good' });
-          audio.pluck(q.rootMidi, 0, 0.6); // starton + mål klingar ihop
-          $('target').className = 'target-note answer right';
-          env.feedback(`Rätt – ${q.iv.name} ${dirWord(q.dir)} från ${q.rootName} är ${q.targetName} (${fmtSec(t)}).`, 'good');
-          endRound(elapsed);
+          board.setMarker(`a${step}`, { ...pos, label, kind: 'good' });
+          last = m;
+          step++;
+          if (step >= 4) onComplete();
+          else {
+            renderSteps(cur);
+            env.feedback(`${label} ✓`, 'good');
+          }
+          return;
+        }
+        board.setMarker('bad', { ...pos, label, kind: 'bad', ttl: 800 });
+        const want = noteName(expectedPc(), chord.flats);
+        const up = dirOf(cur) === 'up';
+        if (pc(m) === expectedPc() && step === 0) {
+          // Rätt grundton men arpeggiot får inte plats åt det hållet – räknas inte som fel.
+          env.feedback(`Ta en ${up ? 'lägre' : 'högre'} ${want} – arpeggiot ska få plats i läget.`, 'near');
           return;
         }
         score.wrong++;
-        if (!tried) missed.set(q.iv, (missed.get(q.iv) || 0) + 1);
-        tried = true;
-        updateScore();
-        const label = noteText(pc(midi));
-        board.setMarker('bad', { ...tap, label, kind: 'bad', ttl: 800 });
-        const diff = midi - q.rootMidi;
-        if (pc(midi) === pc(q.targetMidi)) {
-          env.feedback(`Rätt ton (${label}) men fel oktav – ${dirWord(q.dir)} från startonen.`, 'bad');
-        } else if (diff !== 0 && bySemis.has(Math.abs(diff))) {
-          env.feedback(`Fel – det där var ${bySemis.get(Math.abs(diff)).name} ${dirWord(diff)} (${label}).`, 'bad');
+        if (pc(m) === expectedPc()) {
+          env.feedback(`Rätt ton, fel oktav – ta närmaste ${want} ${up ? 'ovanför' : 'nedanför'}.`, 'bad');
+        } else if (chord.pcs.includes(pc(m))) {
+          env.feedback(`${label} finns i ${chord.name}, men nu är det ${want}.`, 'bad');
         } else {
-          env.feedback(`Fel – det där var ${label}.`, 'bad');
+          env.feedback(`${label} finns inte i ${chord.name}.`, 'bad');
         }
       },
     });
 
-    const startRound = (at) => {
-      round++;
-      q = pickQuestion();
-      tried = false;
-      board.clearMarkers();
-      board.setMarker('root', { ...q.root, label: q.rootName, kind: 'start' });
-      audio.pluck(q.rootMidi);
-      roundStart = at;
-      roundEnd = at + BARS * barDur;
-      accepting = true;
-      const targetEl = $('target');
-      targetEl.textContent = ivLabel(q.iv, q.dir);
-      targetEl.className = 'target-note';
-      void targetEl.offsetWidth;
-      targetEl.classList.add('pop');
-      $('root').textContent = q.rootName;
-      $('name').textContent = `${q.iv.name} ${dirWord(q.dir)}`;
-      $('round').textContent = `${round}/${ROUNDS}`;
-      env.feedback(`Hitta ${q.iv.name} ${dirWord(q.dir)} från ${q.rootName}.`, '');
-    };
+    // ---- Komp: samma som i triadövningarna ----
+    const bus = audio.createBus(0.6);
 
-    // Avsluta intervallet och lägg nästa på en kommande taktetta.
-    const endRound = (elapsed, late = false) => {
-      accepting = false;
-      board.removeMarker('free');
-      if (late) {
-        board.removeMarker('bad');
-        // Visa de lägen som ligger närmast startonen.
-        const dist = (p) => Math.abs(p.fret - q.root.fret) + Math.abs(p.string - q.root.string) * 0.5;
-        const best = Math.min(...q.places.map(dist));
-        q.places.filter((p) => dist(p) <= best + 1)
-          .forEach((p) => board.setMarker(`h${posKey(p)}`, { ...p, label: q.targetName, kind: 'hint' }));
-        audio.pluck(q.targetMidi);
+    const playStep = (bar, s, t, hold) => {
+      const chord = chordOf(bar);
+      const root = bassNote(chord.root);
+      audio.drumStep(s, t, bus);
+      if (s === 0) {
+        audio.chord(chord.voicing, t, stepDur * (hold ? 16 : 2.8), bus);
+        audio.bass(root, t, stepDur * (hold ? 8 : 2.6), bus);
+      } else if (s === 3) {
+        audio.chord(chord.voicing, t, stepDur * 4.6, bus);
+        audio.bass(root, t, stepDur * 0.9, bus);
+      } else if (s === 4) {
+        audio.bass(root + (chord.quality === 'dim' ? 6 : 7), t, stepDur * 1.8, bus);
+      } else if (s === 6) {
+        audio.bass(root + 12, t, stepDur * 0.9, bus);
+      } else if (s === 7) {
+        let approach = bassNote(chordOf(bar + 1).root) - 1;
+        if (approach < 33) approach += 2;
+        audio.bass(approach, t, stepDur * 0.9, bus);
       }
-      updateScore();
-      const minGap = late ? barDur / 2 : barDur / 4;
-      const bar = Math.ceil((elapsed + minGap) / barDur);
-      if (round >= ROUNDS) finishAt = bar * barDur;
-      else nextStart = bar * barDur;
     };
 
-    // Trumkomp med en takts inräkning.
-    const bus = audio.createBus(0.55);
-    const t0 = audio.now + 0.12;
-    const startAt = t0 + COUNT_IN_STEPS * stepDur;
-    const scheduler = new Scheduler(BPM, (i, t) => {
-      if (i < COUNT_IN_STEPS) {
-        if (i % 2 === 0) audio.click(t, bus);
+    const scheduleBar = (bar, t0, from = 0, to = STEPS_PER_BAR) => {
+      for (let s = from; s < to; s++) playStep(bar, s, t0 + s * stepDur, waitMode && s === 0);
+      bars[bar] = { start: t0 };
+    };
+
+    const scheduleNext = (bar, t0) => {
+      if (bar >= totalBars) scheduleEnding(t0);
+      else scheduleBar(bar, t0, 0, waitMode ? 1 : STEPS_PER_BAR);
+    };
+
+    const scheduleEnding = (t) => {
+      const chord = chords[0];
+      audio.kick(t, bus);
+      audio.hat(t, bus, 0.2);
+      audio.chord(chord.voicing, t, 2.4, bus);
+      audio.bass(bassNote(chord.root), t, 2.2, bus);
+      endAt = t + 1.6;
+    };
+
+    function onComplete() {
+      complete = true;
+      const chord = chordOf(cur);
+      score.hits++;
+      score.findTime += audio.heardNow - barHeardAt;
+      chips[cur % CHORDS].classList.add('found');
+      chips[cur % CHORDS].classList.remove('waiting');
+      renderSteps(cur);
+      if (waitMode) {
+        const t1 = Math.max(bars[cur].start + stepDur, audio.now + LEAD);
+        const t0 = t1 - stepDur;
+        scheduleBar(cur, t0, 1, STEPS_PER_BAR);
+        scheduleNext(cur + 1, t0 + barDur);
+      }
+      if (waitingNow) {
+        waitingNow = false;
+        env.feedback(`${chord.name} klart – vi kör vidare!`, 'good');
       } else {
-        audio.drumStep((i - COUNT_IN_STEPS) % STEPS_PER_BAR, t, bus);
+        env.feedback(`${chord.name} klart! Spela fritt tills nästa ackord.`, 'good');
       }
-    });
-    scheduler.start(t0);
+    }
 
-    env.setTimer(Math.ceil(BARS * barDur));
-    env.feedback('Gör dig redo …', '');
-    let raf = requestAnimationFrame(function frame() {
+    const enterBar = (bar) => {
+      if (cur >= 0 && !complete) score.missed++;
+      cur = bar;
+      step = 0;
+      last = null;
+      complete = false;
+      waitingNow = false;
+      barHeardAt = audio.heardNow;
+      if (!waitMode) scheduleNext(bar + 1, bars[bar].start + barDur);
+      board.clearMarkers();
+      const chord = chordOf(bar);
+      const idx = bar % CHORDS;
+      chips.forEach((c, i) => {
+        c.classList.toggle('active', i === idx);
+        c.classList.remove('found', 'waiting');
+      });
+      chordEl.textContent = chord.name;
+      chordEl.classList.remove('pop');
+      void chordEl.offsetWidth;
+      chordEl.classList.add('pop');
+      renderSteps(bar);
+      loopEl.textContent = `Varv ${Math.floor(bar / CHORDS) + 1}/${LOOPS}`;
+      env.feedback('', '');
+    };
+
+    renderSteps(0);
+    env.feedback('Orientera dig på greppbrädan och tryck Redo.', '');
+    env.setTimer(0);
+
+    let startAt = 0;
+    let raf = 0;
+    const readyBtn = document.createElement('button');
+    readyBtn.className = 'primary ready-btn board-ready';
+    readyBtn.textContent = 'Redo';
+    env.board.append(readyBtn);
+    readyBtn.addEventListener('click', () => {
       if (done) return;
-      const elapsed = audio.heardNow - startAt;
-      if (elapsed >= 0) {
-        if (finishAt !== null && elapsed >= finishAt) {
-          finish();
-          return;
-        }
-        if (!accepting && finishAt === null && elapsed >= nextStart) startRound(nextStart);
-        if (accepting && elapsed >= roundEnd) {
-          score.late++;
-          if (!tried) missed.set(q.iv, (missed.get(q.iv) || 0) + 1);
-          $('target').className = 'target-note answer late';
-          env.feedback(`För sent – ${q.iv.name} ${dirWord(q.dir)} från ${q.rootName} är ${q.targetName} (streckad).`, 'near');
-          endRound(elapsed, true);
-        }
-        if (accepting) {
-          const frac = Math.min(1, (elapsed - roundStart) / (roundEnd - roundStart));
-          $('progress').style.width = `${frac * 100}%`;
-          env.setTimer(Math.ceil(roundEnd - elapsed));
-        }
-      }
+      readyBtn.remove();
+      const t0 = audio.now + LEAD;
+      for (let i = 0; i < COUNT_IN_BEATS; i++) audio.click(t0 + i * 2 * stepDur, bus);
+      startAt = t0 + COUNT_IN_BEATS * 2 * stepDur;
+      scheduleNext(0, startAt);
+      env.feedback('Lyssna in takten …', '');
       raf = requestAnimationFrame(frame);
     });
 
-    function finish() {
-      stop();
-      const stats = [
-        { label: `Rätt (av ${ROUNDS})`, value: score.right, kind: 'good' },
-        { label: 'Fel', value: score.wrong, kind: 'bad' },
-        { label: 'För sent', value: score.late, kind: 'near' },
-      ];
-      if (times.length) {
-        stats.push({ label: 'Mediantid, rätt direkt', value: fmtSec(median(times)), kind: '' });
+    function frame() {
+      if (done) return;
+      const now = audio.heardNow;
+      env.setTimer(Math.max(0, Math.floor(now - startAt)));
+
+      if (endAt !== null && now >= endAt) {
+        finish();
+        return;
       }
-      let note = `${ROUNDS} intervall · ${opts.set === 'all' ? 'alla intervall' : 'ters, kvart, kvint, oktav'} · ${dirs.length > 1 ? 'upp & ned' : 'uppåt'} · ${BARS} ${BARS === 1 ? 'takt' : 'takter'} per intervall`;
-      // Svårast: flest missar, annars långsammast (median, minst två rätta svar).
-      const worst = [...missed.entries()].sort((a, b) => b[1] - a[1])[0];
-      const slow = [...byInterval.entries()].filter(([, ts]) => ts.length >= 2)
-        .map(([iv, ts]) => [iv, median(ts)]).sort((a, b) => b[1] - a[1]);
-      if (worst) note += ` · svårast: ${worst[0].name} (${worst[1]} miss${worst[1] === 1 ? '' : 'ar'})`;
-      else if (slow.length >= 2) note += ` · långsammast: ${slow[0][0].name} (${fmtSec(slow[0][1])})`;
-      env.finish({ title: 'Intervall', note, stats });
+      const next = cur + 1;
+      if (bars[next] && now >= bars[next].start) enterBar(next);
+
+      if (cur >= 0) {
+        const chip = chips[cur % CHORDS];
+        let into = now - bars[cur].start;
+        if (waitMode && !complete) into = Math.min(into, stepDur);
+        chip.querySelector('i').style.width = `${Math.min(1, Math.max(0, into) / barDur) * 100}%`;
+        if (waitMode && !complete && !waitingNow && into >= stepDur) {
+          waitingNow = true;
+          chip.classList.add('waiting');
+          env.feedback(`Musiken väntar – spela arpeggiot i ${chordOf(cur).name}.`, 'near');
+        }
+      }
+      raf = requestAnimationFrame(frame);
+    }
+
+    function finish() {
+      if (cur >= 0 && !complete) score.missed++;
+      const seconds = Math.round(endAt - startAt);
+      const dirText = { up: 'uppåt', down: 'nedåt', mixed: 'växlande' }[opts.dir] || 'uppåt';
+      stop();
+      env.finish({
+        title: 'Arpeggios i tonart',
+        note: `${chords.map((c) => c.name).join(' – ')} · band ${fretStart}–${fretEnd} · `
+          + `tonart ${keyName(chords[0].key)} · ${dirText} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
+        stats: [
+          { label: `Klara arpeggios (av ${totalBars})`, value: score.hits, kind: 'good' },
+          { label: 'Feltryck', value: score.wrong, kind: 'bad' },
+          waitMode
+            ? { label: 'Snittid per ackord', value: `${(score.findTime / Math.max(1, score.hits)).toFixed(1).replace('.', ',')} s`, kind: 'near' }
+            : { label: 'Missade ackord', value: score.missed, kind: 'near' },
+        ],
+      });
     }
 
     function stop() {
       if (done) return;
       done = true;
+      readyBtn.remove();
       cancelAnimationFrame(raf);
-      scheduler.stop();
       audio.fadeOutBus(bus);
       board.destroy();
     }
