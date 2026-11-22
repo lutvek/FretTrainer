@@ -52,6 +52,14 @@ trummor, ackord, bas) syntetiseras i webbläsaren med Web Audio.
    för rätta svar och långsammaste sträng.
 8. **Grundtoner på G, B & e** – som övning 1, men på de tre ljusa strängarna
    (G, B och e, band 0–12).
+9. **Intervall** – en starton (orange) tänds på greppbrädan och ett intervall
+   visas, t.ex. ♭3↑ (liten ters upp). Hitta tonen i rätt oktav, på valfri sträng,
+   innan tiden tar slut; måltonen går alltid att nå inom fyra band från startonen.
+   Fel tryck förklaras (t.ex. "rätt ton men fel oktav" eller vilket intervall du
+   tog), och missade intervall visas streckade. 16 intervall i trumkomp, 100 bpm.
+   Välj Vanliga (terser, kvart, kvint, oktav) eller alla 12, Uppåt eller Upp & ned,
+   och 2 eller 1 takt per intervall. Tonerna stavas efter intervallet (liten ters
+   från C är E♭). Poäng: rätt / fel / för sent, mediantid och svåraste intervall.
 
 ## Installera på iPhone (PWA)
 
@@ -98,7 +106,7 @@ läge, Safari 17+). Hörs ändå inget: kontrollera ringsignalsreglaget och voly
 | `js/music.js` | Tonnamn, lägen på halsen, "närmaste läge", ackordföljder (även slumpade med dim och tonartsbyten) |
 | `js/audio.js` | Ljudmotor (Karplus–Strong-gitarr, trummor, ackord, bas) och taktschemaläggare |
 | `js/fretboard.js` | Greppbrädan som SVG – valfritt bandintervall (t.ex. 0–12, en position eller 0–20) och aktiva strängar |
-| `js/ex1.js`, `js/ex2.js`, `js/ex4.js`, `js/ex5.js` | Övningarna (`ex1.js` innehåller både övning 1 och 3) |
+| `js/ex1.js`, `js/ex2.js`, `js/ex4.js`, `js/ex5.js`, `js/ex7.js`, `js/ex9.js` | Övningarna (`ex1.js` innehåller övning 1, 3 och 8) |
 | `js/app.js` | Meny, spelvy och resultat |
 
 En ny övning är ett objekt med `id`, `title`, `desc`, `options` och
